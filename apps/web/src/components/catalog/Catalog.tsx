@@ -16,7 +16,7 @@ export const KIND_META: Record<CatalogKind, { plural: string; singular: string; 
 
 export async function CatalogList({ kind }: { kind: CatalogKind }) {
   const meta = KIND_META[kind];
-  let items: Array<{ slug: string; name: string }> = [];
+  let items: Array<{ slug: string; name: string }>;
   try {
     const catalog = await fetchCatalog(kind);
     items = (catalog.data ?? []) as Array<{ slug: string; name: string }>;
@@ -46,7 +46,7 @@ export async function CatalogList({ kind }: { kind: CatalogKind }) {
 
 export async function CatalogDetail({ kind, slug }: { kind: CatalogKind; slug: string }) {
   const meta = KIND_META[kind];
-  let items: Array<{ slug: string; name: string }> = [];
+  let items: Array<{ slug: string; name: string }>;
   try {
     const catalog = await fetchCatalog(kind);
     items = (catalog.data ?? []) as Array<{ slug: string; name: string }>;
@@ -62,7 +62,7 @@ export async function CatalogDetail({ kind, slug }: { kind: CatalogKind; slug: s
       </main>
     );
   }
-  let clinics: ClinicSummary[] = [];
+  let clinics: ClinicSummary[];
   let total = 0;
   try {
     const res = await fetchClinics({ [meta.param]: slug, limit: '12' });
