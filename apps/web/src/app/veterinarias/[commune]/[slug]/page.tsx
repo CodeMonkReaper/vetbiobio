@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: Props) {
 function badge(status: string, verifiedAt: string | null) {
   if (status === 'VERIFIED') return `✓ Información verificada — Verificada el ${verifiedAt?.slice(0, 10) ?? ''}`;
   if (status === 'OUTDATED') return `⚠ Posiblemente desactualizada — Última verificación: ${verifiedAt?.slice(0, 10) ?? 's/f'}`;
+  if (status === 'PENDING_REVIEW') return '◷ Información en revisión — aún no verificada';
   return 'ⓘ Información sin verificar';
 }
 

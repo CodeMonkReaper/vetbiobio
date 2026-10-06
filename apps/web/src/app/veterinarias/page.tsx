@@ -16,7 +16,8 @@ export async function generateMetadata({ searchParams }: Props) {
 function badge(status: string, verifiedAt: string | null) {
   if (status === 'VERIFIED') return `✓ Verificada el ${verifiedAt?.slice(0, 10) ?? ''}`;
   if (status === 'OUTDATED') return `⚠ Posiblemente desactualizada (${verifiedAt?.slice(0, 10) ?? 's/f'})`;
-  return 'Sin verificar';
+  if (status === 'PENDING_REVIEW') return '◷ En revisión';
+  return 'ⓘ Sin verificar';
 }
 
 export default async function Listing({ searchParams }: Props) {

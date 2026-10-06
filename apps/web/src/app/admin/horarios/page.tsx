@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminApi } from '@/lib/admin';
 
@@ -9,6 +9,14 @@ const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 type Row = { id: number; day_of_week: number; opening_time: string | null; closing_time: string | null; is_closed: boolean };
 
 export default function AdminHorarios() {
+  return (
+    <Suspense>
+      <HorariosInner />
+    </Suspense>
+  );
+}
+
+function HorariosInner() {
   const router = useRouter();
   const slug = useSearchParams().get('clinica') ?? '';
   const [rows, setRows] = useState<Row[]>([]);

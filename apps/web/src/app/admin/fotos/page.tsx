@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminApi } from '@/lib/admin';
 import { fetchClinic } from '@/lib/api';
@@ -8,6 +8,14 @@ import { fetchClinic } from '@/lib/api';
 type Photo = { url: string; alt_text: string | null; is_primary: boolean };
 
 export default function AdminFotos() {
+  return (
+    <Suspense>
+      <FotosInner />
+    </Suspense>
+  );
+}
+
+function FotosInner() {
   const router = useRouter();
   const slug = useSearchParams().get('clinica') ?? '';
   const [photos, setPhotos] = useState<Photo[]>([]);

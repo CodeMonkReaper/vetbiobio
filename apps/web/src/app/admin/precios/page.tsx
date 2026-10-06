@@ -1,12 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminApi } from '@/lib/admin';
 
 type Row = { id: number; kind: string; slug: string; name: string; min_amount: number | null; pricing_type: string | null };
 
 export default function AdminPrecios() {
+  return (
+    <Suspense>
+      <PreciosInner />
+    </Suspense>
+  );
+}
+
+function PreciosInner() {
   const router = useRouter();
   const slug = useSearchParams().get('clinica') ?? '';
   const [rows, setRows] = useState<Row[]>([]);
