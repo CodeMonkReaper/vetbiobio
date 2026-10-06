@@ -1,0 +1,367 @@
+// Prisma schema — ver docs/database-design.md para DDL completa con PostGIS.
+// Nota ADR-001: `location GEOGRAPHY` + trigger sync_location + vistas v_current_*
+// se crean en migraciones SQL manuales; Prisma gestiona el resto.
+// Enums espejan packages/types.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClinicStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  CLOSED
+  PENDING_VERIFICATION
+
+  @@map("clinic_status")
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING_REVIEW
+  VERIFIED
+  OUTDATED
+  REJECTED
+
+  @@map("verification_status")
+}
+
+enum PricingType {
+  FIXED
+  RANGE
+  FROM
+  CONTACT
+
+  @@map("pricing_type")
+}
+
+enum AnimalSpecies {
+  DOG
+  CAT
+  RABBIT
+  BIRD
+  REPTILE
+  RODENT
+  EXOTIC
+  OTHER
+
+  @@map("animal_species")
+}
+
+model Country {
+  id      BigInt   @id @default(autoincrement()) @db.BigInt
+  iso2    String   @unique @db.Char(2)
+  name    String
+  regions Region[]
+
+  @@map("country")
+}
+
+model Region {
+  id        BigInt    @id @default(autoincrement()) @db.BigInt
+  countryId BigInt    @map("country_id") @db.BigInt
+  code      String
+  name      String
+  country   Country   @relation(fields: [countryId], references: [id])
+  communes  Commune[]
+
+  @@unique([countryId, code])
+  @@map("region")
+}
+
+model Commune {
+  id       BigInt @id @default(autoincrement()) @db.BigInt
+  regionId BigInt @map("region_id") @db.BigInt
+  cut      String
+  name     String
+  slug     String @unique @db.Citext
+  region   Region @relation(fields: [regionId], references: [id])
+
+  @@map("commune")
+}
+
+model Clinic {
+  id                 BigInt              @id @default(autoincrement()) @db.BigInt
+  name               String
+  slug               String              @unique @db.Citext
+  description        String?
+  phoneE164          String?             @map("phone_e164")
+  email              String?             @db.Citext
+  website            String?
+  whatsappE164       String?             @map("whatsapp_e164")
+  status             ClinicStatus        @default(DRAFT)
+  verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  isEmergency        Boolean             @default(false) @map("is_emergency")
+  is24h              Boolean             @default(false) @map("is_24h")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  services           ClinicService[]
+  exams              ClinicExam[]
+  equipment          ClinicEquipment[]
+  animals            ClinicAnimal[]
+  photos             ClinicPhoto[]
+  schedules          Schedule[]
+  reports            Report[]
+  events             ClinicEvent[]
+  advertisements     Advertisement[]
+  subscriptions      PremiumSubscription[]
+
+  @@map("clinic")
+}
+
+model Service {
+  id      BigInt          @id @default(autoincrement()) @db.BigInt
+  name    String
+  slug    String          @unique @db.Citext
+  clinics ClinicService[]
+
+  @@map("service")
+}
+
+model Exam {
+  id      BigInt       @id @default(autoincrement()) @db.BigInt
+  name    String
+  slug    String       @unique @db.Citext
+  clinics ClinicExam[]
+
+  @@map("exam")
+}
+
+model Specialty {
+  id   BigInt @id @default(autoincrement()) @db.BigInt
+  name String
+  slug String @unique @db.Citext
+
+  @@map("specialty")
+}
+
+model Equipment {
+  id      BigInt            @id @default(autoincrement()) @db.BigInt
+  name    String
+  slug    String            @unique @db.Citext
+  clinics ClinicEquipment[]
+
+  @@map("equipment")
+}
+
+model ClinicEquipment {
+  clinicId    BigInt    @map("clinic_id") @db.BigInt
+  equipmentId BigInt    @map("equipment_id") @db.BigInt
+  clinic      Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@id([clinicId, equipmentId])
+  @@map("clinic_equipment")
+}
+
+model ClinicAnimal {
+  clinicId BigInt         @map("clinic_id") @db.BigInt
+  species  AnimalSpecies
+  clinic   Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@id([clinicId, species])
+  @@map("clinic_animal")
+}
+
+model ClinicService {
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  clinicId   BigInt   @map("clinic_id") @db.BigInt
+  serviceId  BigInt   @map("service_id") @db.BigInt
+  clinic     Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  service    Service  @relation(fields: [serviceId], references: [id])
+  prices     ClinicServicePrice[]
+
+  @@unique([clinicId, serviceId])
+  @@map("clinic_service")
+}
+
+model ClinicExam {
+  id       BigInt   @id @default(autoincrement()) @db.BigInt
+  clinicId BigInt   @map("clinic_id") @db.BigInt
+  examId   BigInt   @map("exam_id") @db.BigInt
+  clinic   Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  exam     Exam     @relation(fields: [examId], references: [id])
+  prices   ClinicExamPrice[]
+
+  @@unique([clinicId, examId])
+  @@map("clinic_exam")
+}
+
+model ClinicServicePrice {
+  id              BigInt    @id @default(autoincrement()) @db.BigInt
+  clinicServiceId BigInt    @map("clinic_service_id") @db.BigInt
+  minAmount       Int?      @map("min_amount")
+  maxAmount       Int?      @map("max_amount")
+  pricingType     PricingType @map("pricing_type")
+  currency        String    @default("CLP") @db.Char(3)
+  validFrom       DateTime  @default(now()) @map("valid_from") @db.Date
+  validUntil      DateTime? @map("valid_until") @db.Date
+  clinicService   ClinicService @relation(fields: [clinicServiceId], references: [id], onDelete: Cascade)
+
+  @@map("clinic_service_price")
+}
+
+model ClinicExamPrice {
+  id           BigInt    @id @default(autoincrement()) @db.BigInt
+  clinicExamId BigInt    @map("clinic_exam_id") @db.BigInt
+  minAmount    Int?      @map("min_amount")
+  maxAmount    Int?      @map("max_amount")
+  pricingType  PricingType @map("pricing_type")
+  currency     String    @default("CLP") @db.Char(3)
+  validFrom    DateTime  @default(now()) @map("valid_from") @db.Date
+  validUntil   DateTime? @map("valid_until") @db.Date
+  clinicExam   ClinicExam @relation(fields: [clinicExamId], references: [id], onDelete: Cascade)
+
+  @@map("clinic_exam_price")
+}
+
+enum VerificationSource {
+  OFFICIAL_WEBSITE
+  OFFICIAL_SOCIAL_MEDIA
+  PHONE
+  WHATSAPP
+  EMAIL
+  DIRECT_COMMUNICATION
+  PUBLIC_SOURCE
+  ADMIN_RESEARCH
+  OTHER
+
+  @@map("verification_source")
+}
+
+model User {
+  id           BigInt   @id @default(autoincrement()) @db.BigInt
+  email        String   @unique @db.Citext
+  passwordHash String   @map("password_hash")
+  role         String
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("user")
+}
+
+model VerificationLog {
+  id          BigInt              @id @default(autoincrement()) @db.BigInt
+  entityType  String              @map("entity_type")
+  entityId    BigInt              @map("entity_id") @db.BigInt
+  oldStatus   VerificationStatus? @map("old_status")
+  newStatus   VerificationStatus  @map("new_status")
+  changedBy   BigInt?             @map("changed_by") @db.BigInt
+  source      VerificationSource? 
+  method      String?
+  notes       String?
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("verification_log")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  userId     BigInt?  @map("user_id") @db.BigInt
+  action     String
+  entityType String   @map("entity_type")
+  entityId   BigInt   @map("entity_id") @db.BigInt
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address") @db.Inet
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("audit_log")
+}
+
+model Report {
+  id           BigInt   @id @default(autoincrement()) @db.BigInt
+  clinicId     BigInt?  @map("clinic_id") @db.BigInt
+  reason       String
+  message      String?
+  reporterHash String?  @map("reporter_hash")
+  status       String   @default("OPEN")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  clinic       Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+
+  @@map("report")
+}
+
+model SlugRedirect {
+  oldSlug   String   @id @db.Citext @map("old_slug")
+  newSlug   String   @db.Citext @map("new_slug")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("slug_redirect")
+}
+
+model ClinicPhoto {
+  id                 BigInt              @id @default(autoincrement()) @db.BigInt
+  clinicId           BigInt              @map("clinic_id") @db.BigInt
+  url                String
+  publicId           String?             @map("public_id")
+  altText            String?             @map("alt_text")
+  sortOrder          Int                 @default(0) @map("sort_order")
+  isPrimary          Boolean             @default(false) @map("is_primary")
+  verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  clinic             Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("clinic_photo")
+}
+
+model Schedule {
+  id                 BigInt              @id @default(autoincrement()) @db.BigInt
+  clinicId           BigInt              @map("clinic_id") @db.BigInt
+  dayOfWeek          Int                 @map("day_of_week")
+  openingTime        DateTime?           @map("opening_time") @db.Time
+  closingTime        DateTime?           @map("closing_time") @db.Time
+  isClosed           Boolean             @default(false) @map("is_closed")
+  isOvernight        Boolean             @default(false) @map("is_overnight")
+  validFrom          DateTime?           @map("valid_from") @db.Date
+  validUntil         DateTime?           @map("valid_until") @db.Date
+  label              String?
+  verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verifiedAt         DateTime?           @map("verified_at") @db.Timestamptz
+  clinic             Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("schedule")
+}
+
+model ClinicEvent {
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  clinicId    BigInt?  @map("clinic_id") @db.BigInt
+  type        String
+  sessionHash String?  @map("session_hash")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  clinic      Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+
+  @@map("clinic_event")
+}
+
+model Advertisement {
+  id           BigInt   @id @default(autoincrement()) @db.BigInt
+  clinicId     BigInt?  @map("clinic_id") @db.BigInt
+  campaignName String   @map("campaign_name")
+  placement    String
+  startAt      DateTime @map("start_at") @db.Timestamptz
+  endAt        DateTime @map("end_at") @db.Timestamptz
+  status       String   @default("DRAFT")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  clinic       Clinic?  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("advertisement")
+}
+
+model PremiumSubscription {
+  id        BigInt    @id @default(autoincrement()) @db.BigInt
+  clinicId  BigInt    @map("clinic_id") @db.BigInt
+  planId    String    @map("plan_id")
+  status    String    @default("ACTIVE")
+  startedAt DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  clinic    Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("premium_subscription")
+}

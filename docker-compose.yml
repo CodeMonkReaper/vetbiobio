@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vetbiobio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-vetbiobio}
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: ./infra/docker/api.Dockerfile
+    depends_on:
+      - db
+    ports:
+      - "3001:3001"
+    env_file: .env
+
+  web:
+    build: ./infra/docker/web.Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    env_file: .env
+
+volumes:
+  pgdata:

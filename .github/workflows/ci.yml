@@ -1,0 +1,58 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: vetbiobio
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: vetbiobio
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U vetbiobio"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://vetbiobio:changeme@localhost:5432/vetbiobio?schema=public
+      JWT_SECRET: ci-test-min-32-chars-1234567890abcdef
+      ADMIN_EMAIL: admin@vetbiobio.local
+      ADMIN_PASSWORD: ci-admin-password-1234
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec tsc --noEmit
+      - run: pnpm --filter web exec tsc --noEmit
+      - run: pnpm --filter api exec jest --config ./test/jest-unit.json
+      # Migraciones SQL manuales en orden (0005 antes que 0004: triggers referencian professional).
+      # En Linux el pipe es UTF-8 seguro, así que no se necesita 0007_fix_utf8.
+      - run: |
+          cd apps/api
+          for f in prisma/migrations/0000_init/migration.sql \
+                   prisma/migrations/0001_catalogs/migration.sql \
+                   prisma/migrations/0002_admin/migration.sql \
+                   prisma/migrations/0003_fix/migration.sql \
+                   prisma/migrations/0005_professionals/migration.sql \
+                   prisma/migrations/0004_search/migration.sql \
+                   prisma/migrations/0006_es_unaccent/migration.sql \
+                   prisma/migrations/0007_events/migration.sql \
+                   prisma/migrations/0008_monetization/migration.sql; do
+            pnpm exec prisma db execute --file "$f" --schema prisma/schema.prisma
+          done
+          for f in ../../infra/scripts/0001_seed_geo.sql \
+                   ../../infra/scripts/0002_seed_catalogs.sql \
+                   ../../infra/scripts/0004_seed_demo.sql \
+                   ../../infra/scripts/0008_seed_monetization.sql; do
+            pnpm exec prisma db execute --file "$f" --schema prisma/schema.prisma
+          done
+      - run: pnpm --filter api exec jest --config ./test/jest-e2e.json
+      - run: pnpm --filter api exec nest build
+      - run: pnpm --filter web exec next build
