@@ -52,10 +52,18 @@ jobs:
           done
           for f in ../../infra/scripts/0001_seed_geo.sql \
                    ../../infra/scripts/0002_seed_catalogs.sql \
-                   ../../infra/scripts/0004_seed_demo.sql \
-                   ../../infra/scripts/0008_seed_monetization.sql; do
+                   ../../infra/scripts/0008_seed_monetization.sql \
+                   ../../infra/scripts/0009_verificacion_piloto.sql; do
             pnpm exec prisma db execute --file "$f" --schema prisma/schema.prisma
           done
+          # Piloto real (geocodifica vía Nominatim, ~1 min)
+          pnpm exec ts-node --transpile-only scripts/import-csv.ts ../../infra/scripts/piloto-concepcion.csv --commit
       - run: pnpm --filter api exec jest --config ./test/jest-e2e.json
       - run: pnpm --filter api exec nest build
       - run: pnpm --filter web exec next build
+      - run: pnpm --filter web exec playwright install chromium --with-deps
+      - run: |
+          pnpm --filter api exec nest start > /tmp/vet-api.log 2>&1 &
+          pnpm --filter web exec next start -p 3000 > /tmp/vet-web.log 2>&1 &
+          sleep 75
+          pnpm --filter web exec playwright test

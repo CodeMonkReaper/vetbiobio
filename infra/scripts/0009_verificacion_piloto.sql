@@ -1,6 +1,9 @@
 -- Verificación piloto: 1 VERIFIED (sitio oficial leído) + 15 PENDING_REVIEW.
 -- Evidencia CVC: clinicaveterinariaconcepcion.cl (dirección, teléfonos, email,
 -- horario Lun-Vie 10:30-19:00, urgencias, cirugías, hospitalización).
+-- Las fichas se publican (ACTIVE): lo pendiente es la *confianza*, no la existencia.
+
+UPDATE clinic SET status = 'ACTIVE' WHERE status = 'PENDING_VERIFICATION';
 
 -- 1) Clínica Veterinaria Concepción → VERIFIED
 UPDATE clinic SET verification_status = 'VERIFIED', verified_at = now(),

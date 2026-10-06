@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Mapa blank diagnosticado: era build obsoleto sin token; rebuild limpio + token verificado compilado.
+> Última actualización: 2026-10-06 (UTC) — Playwright verifica el mapa: funciona (era render lento del headless).
 
 ## 1. Estado actual
 
@@ -66,6 +66,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Sprints 5-6 frontend (§§23-24,50-51) | `ComparisonTable` (tabla desktop con `th`+caption + cards mobile, `commune_slug` en links) + `/comparar` reescrita con tipos y `Empty`; rutas `/servicios|/especialidades|/examenes` (+detalle con clínicas y CTA) y `/veterinarias/[commune]` (convive con `?commune=`); `lib/prices.ts` compartido (DRY con `PriceDisplay` y tabla; card usa `Desde:` honesto); vitest 3 + jsdom + `globals` (8/8: precios, badges, `no-verificada-sin-estado`); ESLint web flat + scripts `lint`/`test` + paso en CI; OG dinámico descartado (`@vercel/og` incompatible con Windows+pnpm, pendiente Linux/Vercel); verificado en vivo (6 rutas 200); `tsc`+`lint`+build OK; procesos reiniciados |
 | 2026-10-06 | Mapa seguro + estética | `ClinicMap`/`MapEmbed` reescritos: CSS Mapbox por bundler (fuera el `<link>` inválido), marco `aspect-video` que nunca colapsa, `rounded-xl`+borde+sombra+caption, marcador teal, fallback OSM ante error/token ausente, atribución intacta; fix lint `no-useless-assignment` en `Catalog.tsx`; `tsc`+`lint`+build OK; verificado por HTML (marco, caption, sin link); canvas Mapbox requiere navegador real para confirmación visual |
 | 2026-10-06 | Mapa blank: build obsoleto | Servidor corría build anterior al token y al rediseño (CSS/JS existían pero el HTML servido era viejo); rebuild limpio (web detenida + `.next` borrado) + token `pk.*` verificado compilado en el chunk + OSM 200 + frame/mapjs en HTML; causa raíz: `NEXT_PUBLIC_*` se congela en build, hay que reconstruir tras agregar `.env.local` |
+| 2026-10-06 | Playwright: mapa OK | `@playwright/test` + Chromium + `playwright.config.ts` + `e2e/smoke.spec.ts` (home, listado, perfil con canvas/iframe + screenshots, sin errores de página) + script `test:e2e` web; evidencia: home y mapa perfectos (calles de Concepción, río, pin teal); el "blanco" era render lento de SwiftShader (12s de espera lo resuelve); red 24/24 a Mapbox 200, WebGL1 OK; `0009` ahora publica a ACTIVE (era paso manual); CI alineado a piloto (import CSV + 0009) + Playwright con servidores; `e2e/output/` gitignored |
 | 2026-10-06 | Fix estilos Tailwind | Causa: faltaba `postcss.config.js` (CSS salía crudo, 283B) + `.next` con locks de OneDrive dificultó el diagnóstico (config con ruta explícita `__dirname` + rebuild limpio con web detenida → CSS 14.5KB procesado, servido verificado); lección documentada en `docs/deployment.md` §6 |
 
 ## 4. Próximo paso inmediato
