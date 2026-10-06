@@ -79,8 +79,10 @@ export interface ClinicProfile {
   open_now: boolean | null;
   address: string | null;
   commune: string | null;
+  commune_slug: string | null;
   latitude: number | null;
   longitude: number | null;
+  km?: number | null;
   services: ProfilePricedItem[];
   exams: ProfilePricedItem[];
   professionals: ProfileProfessional[];

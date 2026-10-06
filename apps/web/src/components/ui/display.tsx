@@ -1,4 +1,5 @@
 import type { PricingType } from '@/types/domain';
+import { formatFrom, formatPrice } from '@/lib/prices';
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`rounded-lg border border-slate-200 bg-white shadow-card ${className}`}>{children}</div>;
@@ -8,13 +9,12 @@ export function Card({ children, className = '' }: { children: React.ReactNode; 
 export function PriceDisplay({ min, max, type }: {
   min: number | null; max: number | null; type: PricingType;
 }) {
-  const fmt = (n: number) => `$${n.toLocaleString('es-CL')}`;
-  const text =
-    type === 'FIXED' && min !== null ? `${fmt(min)} CLP`
-    : type === 'RANGE' && min !== null && max !== null ? `${fmt(min)} – ${fmt(max)} CLP`
-    : type === 'FROM' && min !== null ? `Desde ${fmt(min)} CLP`
-    : 'Consultar precio';
-  return <span className="font-semibold text-ink">{text}</span>;
+  return <span className="font-semibold text-ink">{formatPrice(min, max, type)}</span>;
+}
+
+// Precio "desde" para cards.
+export function FromPrice({ min }: { min: number | null }) {
+  return <span className="font-semibold text-ink">{formatFrom(min)}</span>;
 }
 
 export function Skeleton({ className = '' }: { className?: string }) {

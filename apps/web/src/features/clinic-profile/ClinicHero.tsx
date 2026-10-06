@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ClinicProfile } from '@/types/domain';
 import { Badge, VerificationBadge } from '@/components/ui/Badge';
-import { ContactLink, TrackView } from '@/features/tracking/Track';
+import { TrackView } from '@/features/tracking/Track';
 
 // Hero del perfil (§18): identidad, verificación, comuna y acciones. Sin "Reservar hora".
 export function ClinicHero({ clinic, communeSlug }: { clinic: ClinicProfile; communeSlug: string }) {

@@ -31,7 +31,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter api exec eslint src
       - run: pnpm --filter api exec tsc --noEmit
+      - run: pnpm --filter web exec eslint src
       - run: pnpm --filter web exec tsc --noEmit
+      - run: pnpm --filter web exec vitest run
       - run: pnpm --filter api exec jest --config ./test/jest-unit.json
       # Migraciones SQL manuales en orden (0005 antes que 0004: triggers referencian professional).
       # En Linux el pipe es UTF-8 seguro, así que no se necesita 0007_fix_utf8.

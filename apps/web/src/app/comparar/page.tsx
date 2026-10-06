@@ -1,23 +1,11 @@
 import { fetchCompare } from '@/lib/api';
+import { ComparisonTable } from '@/components/comparison/ComparisonTable';
+import { Breadcrumbs } from '@/components/layout/chrome';
+import { Empty } from '@/components/ui/display';
+import type { ClinicProfile } from '@/types/domain';
 
 interface Props {
   searchParams: Record<string, string | undefined>;
-}
-
-type Item = Record<string, unknown>;
-type Price = { min_amount: number | null; max_amount: number | null; pricing_type: string };
-
-function price(p: Price | undefined) {
-  if (!p) return '—';
-  const fmt = (n: number) => `$${n.toLocaleString('es-CL')}`;
-  if (p.pricing_type === 'FIXED' && p.min_amount !== null) return fmt(p.min_amount);
-  if (p.pricing_type === 'RANGE' && p.min_amount !== null && p.max_amount !== null) return `${fmt(p.min_amount)} – ${fmt(p.max_amount)}`;
-  if (p.pricing_type === 'FROM' && p.min_amount !== null) return `Desde ${fmt(p.min_amount)}`;
-  return 'A convenir';
-}
-
-function find(list: Item[], slug: string): Price | undefined {
-  return (list.find((x) => x.slug === slug) as unknown as Price | undefined);
 }
 
 export async function generateMetadata() {
@@ -28,48 +16,46 @@ export async function generateMetadata() {
   };
 }
 
-// ?slugs=a,b[,c] (&lat&lng opcionales para distancia). Máx 3 (API valida).
+// ?slugs=a,b[,c] (&lat&lng opcionales). Máx 3 (API valida).
 export default async function Compare({ searchParams }: Props) {
   const slugs = (searchParams.slugs ?? '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 3);
   if (slugs.length < 2) {
     return (
-      <main>
-        <h1>Comparar</h1>
-        <p>Indica 2 o 3 clínicas: <code>/comparar?slugs=clinica-a,clinica-b</code></p>
+      <main className="space-y-4">
+        <Breadcrumbs trail={[{ href: '/', label: 'Inicio' }, { label: 'Comparar' }]} />
+        <h1 className="text-2xl font-bold">Comparar</h1>
+        <Empty
+          title="Elige 2 o 3 clínicas para comparar."
+          hints={['Usa el botón “Comparar” en cada tarjeta del listado.']}
+        />
       </main>
     );
   }
-  let profiles: Item[] = [];
+
+  let profiles: ClinicProfile[] | null;
   try {
     const res = await fetchCompare(slugs, searchParams.lat, searchParams.lng);
-    profiles = res.data as Item[];
+    profiles = res.data as ClinicProfile[];
   } catch {
-    return <main><h1>Comparar</h1><p>No se pudo cargar la comparación.</p></main>;
+    profiles = null;
   }
-  const rows: Array<{ label: string; get: (c: Item) => string }> = [
-    { label: 'Comuna', get: (c) => c.commune as string },
-    { label: 'Distancia', get: (c) => (typeof c.km === 'number' ? `${(c.km as number).toFixed(1)} km` : '—') },
-    { label: 'Consulta', get: (c) => price(find(c.services as Item[], 'consulta-general')) },
-    { label: 'Radiografía', get: (c) => { const e = find(c.exams as Item[], 'radiografia'); return e ? price(e) : 'No'; } },
-    { label: 'Ecografía', get: (c) => { const e = find(c.exams as Item[], 'ecografia'); return e ? price(e) : 'No'; } },
-    { label: 'Urgencias', get: (c) => ((c.is_emergency as boolean) ? 'Sí' : 'No') },
-    { label: 'Abierto ahora', get: (c) => ((c.open_now as boolean) ? 'Sí' : 'No') },
-    { label: 'Verificación', get: (c) => (c.verification_status as string) === 'VERIFIED' ? `✓ ${(c.verified_at as string)?.slice(0, 10) ?? ''}` : (c.verification_status as string) },
-  ];
+
   return (
-    <main>
-      <h1>Comparar</h1>
-      <table>
-        <thead>
-          <tr><th>Criterio</th>{profiles.map((c) => <th key={c.slug as string}>{c.name as string}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.label}><td>{r.label}</td>{profiles.map((c) => <td key={c.slug as string}>{r.get(c)}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-      <p><small>Precios referenciales. La verificación y la monetización son independientes: un perfil patrocinado no implica verificación.</small></p>
+    <main className="space-y-4">
+      <Breadcrumbs trail={[{ href: '/', label: 'Inicio' }, { label: 'Comparar' }]} />
+      <h1 className="text-2xl font-bold">Comparar</h1>
+      {!profiles ? (
+        <Empty
+          title="No pudimos cargar la comparación."
+          hints={['Revisa que los nombres sean válidos.', 'Vuelve al listado y elige de nuevo.']}
+        />
+      ) : (
+        <ComparisonTable clinics={profiles} />
+      )}
+      <p className="text-sm text-ink-soft">
+        Precios referenciales. La verificación y la monetización son independientes: un perfil
+        patrocinado no implica verificación.
+      </p>
     </main>
   );
 }

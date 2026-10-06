@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ClinicSummary } from '@/types/domain';
-import { Card, PriceDisplay } from '@/components/ui/display';
+import { Card, FromPrice } from '@/components/ui/display';
 import { Badge, VerificationBadge } from '@/components/ui/Badge';
 import { CompareButton } from '@/components/comparison/CompareButton';
 
@@ -26,12 +26,7 @@ export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
         {clinic.open_now ? ' · Abierta ahora' : ''}
       </p>
       <p className="text-sm">
-        Consulta:{' '}
-        {clinic.min_price !== null ? (
-          <PriceDisplay min={clinic.min_price} max={null} type="FROM" />
-        ) : (
-          <span className="text-ink-soft">Consultar precio</span>
-        )}
+        Desde: <FromPrice min={clinic.min_price} />
       </p>
       <div className="mt-auto flex gap-2 pt-2">
         <Link

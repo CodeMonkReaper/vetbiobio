@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Sprint 4 perfil descompuesto en componentes con tipos, en vivo.
+> Última actualización: 2026-10-06 (UTC) — Sprints 5-6 frontend: comparación responsive, rutas catálogo, tests y lint web.
 
 ## 1. Estado actual
 
@@ -63,6 +63,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Frontend foundation (prompt §§1-11) | Sin contradicciones con project_context (rating/autocomplete condicionales OK; `/veterinarias/[commune]` queda como adición futura); tokens Tailwind (brand teal, ink navy, paper, radius, shadow-card, sans) + `globals.css` (foco visible, selección); `components/ui` (Button, fields, Badge, VerificationBadge, Card, PriceDisplay CLP, Skeleton, Alert, Empty) + `types/domain.ts` sin `any`; `Header`/`Footer`/`Breadcrumbs` + skip-link + `metadataBase`/OG base en layout; home §11 (hero, SearchBar con sistema, servicios populares, comunas); `tsc`+build OK; web reiniciada, hero/header/skip verificados por HTTP |
 | 2026-10-06 | Sprint 3 listado (§§13-14,24-25) | `CatalogModule` (`GET /services|/specialties|/exams` de api.md; +`isActive` a 3 modelos + regenerate); `ClinicCard` (badges, comuna/km/abierto, precio FROM, ver perfil+comparar) + `CompareButton`/`CompareBar` (localStorage máx 3, sin estado global) + `FilterPanel` (todo en URL) + `Pagination` con links + `loading.tsx` skeletons; página reescrita (breadcrumbs, Alert error con reintento, Empty con hints); verificado en vivo (cards, filtros, migas, vacío); fix build OneDrive (limpiar `.next`); procesos reiniciados |
 | 2026-10-06 | Sprint 4 perfil (§§17-22,37) | `types/domain.ts` extendido (perfil, precios, profesionales, horarios, fotos, sin `any`); `features/clinic-profile/` (ClinicHero, ClinicContact, ScheduleTable con overnight, ClinicServices/ClinicExams con cards+precio+verificación, ProfessionalCard, ClinicLocation con MapView, ClinicPhotos con `next/image`+alt); página recompuesta + breadcrumbs + OG + descripciones/canonical por perfil; verificado en vivo (hero, migas, OG, 6 secciones); `tsc`+build OK; web reiniciada |
+| 2026-10-06 | Sprints 5-6 frontend (§§23-24,50-51) | `ComparisonTable` (tabla desktop con `th`+caption + cards mobile, `commune_slug` en links) + `/comparar` reescrita con tipos y `Empty`; rutas `/servicios|/especialidades|/examenes` (+detalle con clínicas y CTA) y `/veterinarias/[commune]` (convive con `?commune=`); `lib/prices.ts` compartido (DRY con `PriceDisplay` y tabla; card usa `Desde:` honesto); vitest 3 + jsdom + `globals` (8/8: precios, badges, `no-verificada-sin-estado`); ESLint web flat + scripts `lint`/`test` + paso en CI; OG dinámico descartado (`@vercel/og` incompatible con Windows+pnpm, pendiente Linux/Vercel); verificado en vivo (6 rutas 200); `tsc`+`lint`+build OK; procesos reiniciados |
 
 ## 4. Próximo paso inmediato
 
