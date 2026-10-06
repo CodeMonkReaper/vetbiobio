@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Mapbox + Cloudinary integrados con fallback; pendiente solo credenciales para verificación en vivo.
+> Última actualización: 2026-10-06 (UTC) — Credenciales live verificadas: Mapbox 200 + ciclo Cloudinary completo (upload/attach/destroy).
 
 ## 1. Estado actual
 
@@ -55,6 +55,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Repo git + primer commit | `git init -b main` + `.gitattributes` + commit `75a370d` (134 archivos); pre-commit sin fugas (`.env`, `apps/api/.env`, `backups/`, `node_modules` ignorados); remoto pendiente (sin `gh` en el equipo) |
 | 2026-10-06 | Push a GitHub | `gh` 2.102.0 instalado (winget) + auth del usuario; `gh repo create vetbiobio --public` → https://github.com/CodeMonkReaper/vetbiobio (PUBLIC) con push de `main` y tracking `origin/main` |
 | 2026-10-06 | Mapbox + Cloudinary | `ClinicMap` Mapbox GL (lazy solo-cliente, marcador, CSS) con fallback OSM automático sin `NEXT_PUBLIC_MAPBOX_TOKEN`; `MediaModule` (`POST admin/media/sign` firma server-side con `api_sign_request`, `POST admin/media/photos` adjunta + auditoría, guards, 503 honesto sin `CLOUDINARY_*`); verificado por HTTP (503 sign, attach id 1 visible en perfil, foto test eliminada); unit 10/10 (spec 503); `tsc` api+web OK; `next build` OK; `deployment.md` §5 con vars y flujo |
+| 2026-10-06 | Credenciales live | Mapbox pk.* → 200 (`Mapbox Streets v8`), `.env.local` creado; Cloudinary `dfzjjkcn3`: ping 200 (el 401 inicial fue artefacto de PowerShell con userinfo en URL, reintentado con header Basic), `/sign` real, upload 1px 200, attach visible en perfil, destroy `ok` + 404 CDN, fila limpiada; nota: DELETE Admin API a mano devolvió 404 HTML (usar `uploader.destroy` del SDK); **pendiente rotar `CLOUDINARY_API_SECRET`** por circular en chat |
 
 ## 4. Próximo paso inmediato
 
