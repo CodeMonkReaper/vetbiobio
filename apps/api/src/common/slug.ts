@@ -15,7 +15,6 @@ export async function uniqueSlug(base: string, exists: (slug: string) => Promise
   if (!(await exists(root))) return root;
   for (let i = 2; i < 100; i++) {
     const candidate = `${root}-${i}`;
-    // eslint-disable-next-line no-await-in-loop
     if (!(await exists(candidate))) return candidate;
   }
   throw new Error('Sin slug disponible');

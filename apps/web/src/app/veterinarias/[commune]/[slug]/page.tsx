@@ -121,7 +121,8 @@ export default async function ClinicProfile({ params }: Props) {
         <><h2>Equipamiento</h2><ul>{(c.equipment as Item[]).map((e, i) => <li key={i}>{e.name as string}</li>)}</ul></>
       )}
 
-      <p><small>Precios referenciales, pueden variar. Confirma directamente con el establecimiento. ¿Datos incorrectos? Repórtalos desde el listado.</small></p>
+      <p><small>Precios referenciales, pueden variar. Confirma directamente con el establecimiento.</small></p>
+      <p><small>¿Encontraste información incorrecta? <a href={`/reportar?clinica=${params.slug}`}>Reportar</a></small></p>
     </main>
   );
 }

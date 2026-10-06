@@ -1,6 +1,7 @@
 import { Controller, Post, Patch, Param, Body, Get, UseGuards } from '@nestjs/common';
 import { ClinicsService } from './clinics.service';
 import { CreateClinicDto } from './dto/create-clinic.dto';
+import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -19,5 +20,18 @@ export class AdminClinicsController {
   }
   @Get(':slug') bySlug(@Param('slug') slug: string) {
     return this.clinics.bySlugWithRedirect(slug);
+  }
+
+  // Servicios/exámenes con ids (para cargar precios) + precio vigente.
+  @Get(':slug/services') services(@Param('slug') slug: string) {
+    return this.clinics.adminServices(slug);
+  }
+
+  @Get(':slug/schedules') schedules(@Param('slug') slug: string) {
+    return this.clinics.adminSchedules(slug);
+  }
+
+  @Post(':slug/schedules') addSchedule(@Param('slug') slug: string, @Body() dto: CreateScheduleDto) {
+    return this.clinics.adminAddSchedule(slug, dto);
   }
 }

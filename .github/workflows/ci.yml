@@ -29,6 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec eslint src
       - run: pnpm --filter api exec tsc --noEmit
       - run: pnpm --filter web exec tsc --noEmit
       - run: pnpm --filter api exec jest --config ./test/jest-unit.json

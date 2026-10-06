@@ -8,7 +8,6 @@ import { slugify, uniqueSlug } from '../common/slug';
 
 @Injectable()
 export class ClinicsService {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(private readonly geo: ClinicsGeoRepository, private readonly prisma: PrismaService, private readonly audit: AuditService) {}
   search(q: SearchClinicsDto) {
     return this.geo.searchNearby(q);
@@ -118,6 +117,62 @@ export class ClinicsService {
     return { redirect: redir.newSlug };
   }
 
+  // Servicios/exámenes con ids + precio vigente (para el formulario de precios).
+  async adminServices(slug: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows: any[] = await this.prisma.$queryRaw`
+      SELECT cs.id, 'service' AS kind, sv.slug, sv.name,
+             p.min_amount, p.max_amount, p.pricing_type
+      FROM clinic c JOIN clinic_service cs ON cs.clinic_id = c.id
+      JOIN service sv ON sv.id = cs.service_id
+      LEFT JOIN v_current_service_price p ON p.clinic_service_id = cs.id
+      WHERE c.slug = ${slug}
+      UNION ALL
+      SELECT ce.id, 'exam' AS kind, ex.slug, ex.name,
+             p.min_amount, p.max_amount, p.pricing_type
+      FROM clinic c JOIN clinic_exam ce ON ce.clinic_id = c.id
+      JOIN exam ex ON ex.id = ce.exam_id
+      LEFT JOIN v_current_exam_price p ON p.clinic_exam_id = ce.id
+      WHERE c.slug = ${slug}
+      ORDER BY kind, name`;
+    return { data: rows };
+  }
+
+  async adminSchedules(slug: string) {
+    const clinic = await this.prisma.clinic.findUnique({ where: { slug }, select: { id: true } });
+    if (!clinic) throw new NotFoundException('Clínica no existe');
+    return this.prisma.schedule.findMany({
+      where: { clinicId: clinic.id },
+      orderBy: [{ dayOfWeek: 'asc' }, { openingTime: 'asc' }],
+    });
+  }
+
+  async adminAddSchedule(
+    slug: string,
+    dto: { dayOfWeek: number; openingTime?: string; closingTime?: string; isClosed?: boolean; isOvernight?: boolean; label?: string },
+    userId?: number | null,
+  ) {
+    const clinic = await this.prisma.clinic.findUnique({ where: { slug }, select: { id: true } });
+    if (!clinic) throw new NotFoundException('Clínica no existe');
+    if (!dto.isClosed && (!dto.openingTime || !dto.closingTime)) {
+      throw new BadRequestException('Horario abierto requiere apertura y cierre');
+    }
+    const toTime = (t: string) => new Date(`1970-01-01T${t}:00`);
+    const created = await this.prisma.schedule.create({
+      data: {
+        clinicId: clinic.id,
+        dayOfWeek: dto.dayOfWeek,
+        openingTime: dto.openingTime ? toTime(dto.openingTime) : null,
+        closingTime: dto.closingTime ? toTime(dto.closingTime) : null,
+        isClosed: dto.isClosed ?? false,
+        isOvernight: dto.isOvernight ?? false,
+        label: dto.label ?? null,
+      },
+    });
+    await this.audit.record({ userId: userId ?? null, action: 'CREATE', entityType: 'schedule', entityId: Number(created.id) });
+    return created;
+  }
+
   // Comparación: 2–3 perfiles vigentes por slug. Falla 404 si alguno no existe/inactivo.
   async compare(slugs: string[], lat?: number, lng?: number) {
     const uniq = [...new Set(slugs.map((s) => s.trim().toLowerCase()).filter(Boolean))];
@@ -126,7 +181,6 @@ export class ClinicsService {
     }
     const profiles = [];
     for (const slug of uniq) {
-      // eslint-disable-next-line no-await-in-loop
       const p = await this.getProfile(slug);
       profiles.push(p.data);
     }

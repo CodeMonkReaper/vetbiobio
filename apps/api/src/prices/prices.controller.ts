@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { PricesService } from './prices.service';
-import { CreateServicePriceDto } from './dto/create-price.dto';
+import { CreateServicePriceDto, CreateExamPriceDto } from './dto/create-price.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -12,5 +12,9 @@ export class PricesController {
   constructor(private readonly prices: PricesService) {}
   @Post('service') addService(@Body() dto: CreateServicePriceDto) {
     return this.prices.addServicePrice({ ...dto });
+  }
+
+  @Post('exam') addExam(@Body() dto: CreateExamPriceDto) {
+    return this.prices.addExamPrice({ ...dto });
   }
 }

@@ -9,3 +9,12 @@ export class CreateServicePriceDto {
   @IsOptional() @IsString() validFrom?: string;
   @IsOptional() @IsString() source?: string;
 }
+
+export class CreateExamPriceDto {
+  @IsInt() @Min(1) @Type(() => Number) clinicExamId!: number;
+  @IsOptional() @IsInt() @Min(0) @Type(() => Number) minAmount?: number;
+  @IsOptional() @IsInt() @Min(0) @Type(() => Number) maxAmount?: number;
+  @IsIn(['FIXED', 'RANGE', 'FROM', 'CONTACT']) pricingType!: 'FIXED' | 'RANGE' | 'FROM' | 'CONTACT';
+  @IsOptional() @IsString() validFrom?: string;
+  @IsOptional() @IsString() source?: string;
+}

@@ -66,6 +66,9 @@ export default function AdminClinics() {
     <main>
       <h1>Admin — clínicas</h1>
       <button onClick={() => void logout()}>Salir</button>
+      <nav>
+        <a href="/admin/reportes">Reportes</a> · <a href="/admin/verificar">Verificar</a>
+      </nav>
       {error && <p role="alert">{error}</p>}
       <h2>Crear (DRAFT)</h2>
       <form onSubmit={(e) => void create(e)}>
@@ -81,6 +84,9 @@ export default function AdminClinics() {
         {clinics.map((c) => (
           <li key={c.slug}>
             {c.name} — {c.commune} [{c.verification_status}]
+            <a href={`/admin/precios?clinica=${c.slug}`}>Precios</a>
+            <a href={`/admin/horarios?clinica=${c.slug}`}>Horarios</a>
+            <a href={`/admin/fotos?clinica=${c.slug}`}>Fotos</a>
             <button onClick={() => void deactivate(c.slug, c.slug)}>Desactivar</button>
           </li>
         ))}

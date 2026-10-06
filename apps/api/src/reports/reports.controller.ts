@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -12,7 +12,7 @@ export class ReportsController {
   // Público con rate-limit 5/h por IP.
   @Throttle({ default: { limit: 5, ttl: 3600000 } })
   @Post('reports')
-  create(@Body() body: { clinicId?: number; reason: string; message?: string }) {
+  create(@Body() body: { clinicId?: number; clinicSlug?: string; reason: string; message?: string }) {
     return this.reports.create(body);
   }
 
@@ -21,5 +21,12 @@ export class ReportsController {
   @Get('admin/reports')
   listOpen() {
     return this.reports.listOpen();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'EDITOR')
+  @Patch('admin/reports/:id')
+  resolve(@Param('id') id: string, @Body() body: { status: 'TRIAGED' | 'RESOLVED' | 'REJECTED' }) {
+    return this.reports.resolve(Number(id), body.status);
   }
 }
