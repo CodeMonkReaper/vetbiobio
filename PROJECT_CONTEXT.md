@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Credenciales live verificadas: Mapbox 200 + ciclo Cloudinary completo (upload/attach/destroy).
+> Última actualización: 2026-10-06 (UTC) — Piloto con 16 clínicas reales importadas y verificadas; e2e 8/8 sobre datos reales.
 
 ## 1. Estado actual
 
@@ -56,11 +56,13 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Push a GitHub | `gh` 2.102.0 instalado (winget) + auth del usuario; `gh repo create vetbiobio --public` → https://github.com/CodeMonkReaper/vetbiobio (PUBLIC) con push de `main` y tracking `origin/main` |
 | 2026-10-06 | Mapbox + Cloudinary | `ClinicMap` Mapbox GL (lazy solo-cliente, marcador, CSS) con fallback OSM automático sin `NEXT_PUBLIC_MAPBOX_TOKEN`; `MediaModule` (`POST admin/media/sign` firma server-side con `api_sign_request`, `POST admin/media/photos` adjunta + auditoría, guards, 503 honesto sin `CLOUDINARY_*`); verificado por HTTP (503 sign, attach id 1 visible en perfil, foto test eliminada); unit 10/10 (spec 503); `tsc` api+web OK; `next build` OK; `deployment.md` §5 con vars y flujo |
 | 2026-10-06 | Credenciales live | Mapbox pk.* → 200 (`Mapbox Streets v8`), `.env.local` creado; Cloudinary `dfzjjkcn3`: ping 200 (el 401 inicial fue artefacto de PowerShell con userinfo en URL, reintentado con header Basic), `/sign` real, upload 1px 200, attach visible en perfil, destroy `ok` + 404 CDN, fila limpiada; nota: DELETE Admin API a mano devolvió 404 HTML (usar `uploader.destroy` del SDK); **pendiente rotar `CLOUDINARY_API_SECRET`** por circular en chat |
+| 2026-10-06 | Piloto ingesta real (16 clínicas) | Investigación web: 16 reales Gran Concepción (8 Concepción, 5 Talcahuano, 3 San Pedro; móviles sin local y duplicado Lientur excluidos con motivo); `piloto-concepcion.csv` + `scripts/import-csv.ts` (valida CUT/tel/URL/bbox, geocodifica Nominatim con fallback a calle, slugs únicos, auditoría; dry-run primero); 13/16 directo, 3 coords fijadas desde fuentes; demos eliminadas (colisión slug, cascada limpia); import 16/16 ids 9-24 como PENDING; `0009_verificacion_piloto.sql`: 1 VERIFIED (sitio oficial CVC) + 15 PENDING_REVIEW con log; publicación a ACTIVE (pendientes invisibles por diseño); verificado HTTP (Talcahuano 5, SOS por texto+radio, verified_only=1); e2e reescrito a datos piloto 8/8 |
 
 ## 4. Próximo paso inmediato
 
-1. Mapbox con token real y fotos vía Cloudinary (cuando haya credenciales).
-2. Luego: validación piloto con clínicas reales (ingesta + verificación telefónica).
+1. Rotar `CLOUDINARY_API_SECRET` (circuló por chat) y re-verificar firma.
+2. Completar verificación telefónica de las 15 PENDING_REVIEW + cargar servicios/precios reales por clínica.
+3. Luego: legal (términos/privacidad) y deploy staging.
 
 ## 5. Reglas del log
 
