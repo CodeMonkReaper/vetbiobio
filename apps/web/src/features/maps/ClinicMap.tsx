@@ -47,7 +47,12 @@ export function ClinicMap({ lat, lng, label }: { lat: number; lng: number; label
   return (
     <figure className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
       <div className="relative aspect-video w-full bg-paper">
-        <div ref={ref} role="img" aria-label={`Mapa: ${label}`} className="absolute inset-0 [&_canvas]:h-full [&_canvas]:w-full" />
+        <div
+          ref={ref}
+          role="img"
+          aria-label={`Mapa: ${label}`}
+          className="!absolute !inset-0 [&_canvas]:h-full [&_canvas]:w-full"
+        />
       </div>
       <figcaption className="flex items-center justify-between px-4 py-2 text-sm text-ink-soft">
         <span>{label}</span>
