@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { fetchClinic } from '@/lib/api';
-import { MapEmbed } from '@/features/maps/MapEmbed';
+import { ClinicMap } from '@/features/maps/ClinicMap';
 import { ContactLink, TrackView } from '@/features/tracking/Track';
 
 interface Props { params: { commune: string; slug: string } }
@@ -85,7 +85,7 @@ export default async function ClinicProfile({ params }: Props) {
 
       <h2>Ubicación</h2>
       {typeof c.latitude === 'number' && typeof c.longitude === 'number' ? (
-        <MapEmbed lat={c.latitude as number} lng={c.longitude as number} label={c.name as string} />
+        <ClinicMap lat={c.latitude as number} lng={c.longitude as number} label={c.name as string} />
       ) : <p>Sin coordenadas.</p>}
 
       <h2>Horarios</h2>

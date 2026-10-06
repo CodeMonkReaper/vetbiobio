@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Repo público en GitHub con push al día.
+> Última actualización: 2026-10-06 (UTC) — Mapbox + Cloudinary integrados con fallback; pendiente solo credenciales para verificación en vivo.
 
 ## 1. Estado actual
 
@@ -54,6 +54,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | E2E + hardening prod | Harness Jest+supertest (`test:e2e`, 8 specs: buscar, geo+distancia, precios, perfil+histórico, 404, comparar+400, eventos+400, admin 401/login/cookie); BigInt centralizado en `common/bigint-json.ts` (main + setup e2e); fixes: `@nestjs/jwt@10` (v12 ESM-only rompía ts-jest), `@nestjs/testing@10`; `main.ts` exige `JWT_SECRET`/`DATABASE_URL` en prod; `infra/scripts/backup-db.ps1` verificado (dump 177KB + retención 7, `backups/` gitignored); scan sin secretos hardcodeados; `docs/deployment.md` (vars, orden migraciones, backup/restore, checklist); e2e final 8/8, `tsc` OK, eventos test limpiados |
 | 2026-10-06 | Repo git + primer commit | `git init -b main` + `.gitattributes` + commit `75a370d` (134 archivos); pre-commit sin fugas (`.env`, `apps/api/.env`, `backups/`, `node_modules` ignorados); remoto pendiente (sin `gh` en el equipo) |
 | 2026-10-06 | Push a GitHub | `gh` 2.102.0 instalado (winget) + auth del usuario; `gh repo create vetbiobio --public` → https://github.com/CodeMonkReaper/vetbiobio (PUBLIC) con push de `main` y tracking `origin/main` |
+| 2026-10-06 | Mapbox + Cloudinary | `ClinicMap` Mapbox GL (lazy solo-cliente, marcador, CSS) con fallback OSM automático sin `NEXT_PUBLIC_MAPBOX_TOKEN`; `MediaModule` (`POST admin/media/sign` firma server-side con `api_sign_request`, `POST admin/media/photos` adjunta + auditoría, guards, 503 honesto sin `CLOUDINARY_*`); verificado por HTTP (503 sign, attach id 1 visible en perfil, foto test eliminada); unit 10/10 (spec 503); `tsc` api+web OK; `next build` OK; `deployment.md` §5 con vars y flujo |
 
 ## 4. Próximo paso inmediato
 

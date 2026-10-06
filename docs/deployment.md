@@ -40,8 +40,20 @@ Retención local: 7 archivos. En prod, copiar a almacenamiento externo.
 
 ## 4. Checklist prod
 
+* Web: `NEXT_PUBLIC_MAPBOX_TOKEN` (token **público** `pk.*`). Sin él, el perfil usa embed OSM (fallback automático en `ClinicMap`).
+* API: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (**secreto**: solo entorno server, jamás al frontend ni a git).
+  Flujo: `POST /admin/media/sign` (firma server-side) → subida directa navegador→Cloudinary → `POST /admin/media/photos` (adjunta `{url, publicId}` a la clínica). Sin credenciales, `/sign` responde 503 honesto y el resto sigue funcionando.
+
+## 4. Checklist prod
+
 * HTTPS + `Secure` en cookie (automático con `NODE_ENV=production`).
 * CORS = solo `WEB_BASE_URL` exacto.
 * `ADMIN_PASSWORD` rotada + `ADMIN_EMAIL` real.
 * `next build` verde + `/health` OK + `EXPLAIN ANALYZE` de la query de búsqueda.
 * Job diario `mark-outdated.sql` programado.
+
+## 5. Mapbox + Cloudinary
+
+* Web: `NEXT_PUBLIC_MAPBOX_TOKEN` (token **público** `pk.*`). Sin él, el perfil usa embed OSM (fallback automático en `ClinicMap`).
+* API: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (**secreto**: solo entorno server, jamás al frontend ni a git).
+  Flujo: `POST /admin/media/sign` (firma server-side) → subida directa navegador→Cloudinary → `POST /admin/media/photos` (adjunta `{url, publicId}` a la clínica). Sin credenciales, `/sign` responde 503 honesto y el resto sigue funcionando.
