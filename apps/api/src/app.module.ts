@@ -15,12 +15,13 @@ import { EventsModule } from './events/events.module';
 import { CommunesModule } from './communes/communes.module';
 import { PremiumModule } from './premium/premium.module';
 import { MediaModule } from './media/media.module';
+import { CatalogModule } from './catalog/catalog.module';
 
 @Module({
   imports: [
     PrismaModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
-    HealthModule, ClinicsModule, SearchModule, UsersModule, AuthModule, AuditModule, VerificationModule, PricesModule, ReportsModule, EventsModule, CommunesModule, PremiumModule, MediaModule,
+    HealthModule, ClinicsModule, SearchModule, UsersModule, AuthModule, AuditModule, VerificationModule, PricesModule, ReportsModule, EventsModule, CommunesModule, PremiumModule, MediaModule, CatalogModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

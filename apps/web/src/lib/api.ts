@@ -7,6 +7,12 @@ export async function fetchClinics(params: Record<string, string>) {
   return res.json();
 }
 
+export async function fetchCatalog(kind: 'communes' | 'services' | 'exams' | 'specialties') {
+  const res = await fetch(`${API_BASE}/${kind}`, { next: { revalidate: 3600 } });
+  if (!res.ok) return { data: [] };
+  return res.json();
+}
+
 export async function fetchClinic(slug: string) {
   const res = await fetch(`${API_BASE}/clinics/${encodeURIComponent(slug)}`, { next: { revalidate: 60 } });
   if (res.status === 404) return null;

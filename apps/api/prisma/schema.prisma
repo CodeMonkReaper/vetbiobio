@@ -118,6 +118,7 @@ model Service {
   id      BigInt          @id @default(autoincrement()) @db.BigInt
   name    String
   slug    String          @unique @db.Citext
+  isActive Boolean        @default(true) @map("is_active")
   clinics ClinicService[]
 
   @@map("service")
@@ -127,6 +128,7 @@ model Exam {
   id      BigInt       @id @default(autoincrement()) @db.BigInt
   name    String
   slug    String       @unique @db.Citext
+  isActive Boolean     @default(true) @map("is_active")
   clinics ClinicExam[]
 
   @@map("exam")
@@ -136,6 +138,7 @@ model Specialty {
   id   BigInt @id @default(autoincrement()) @db.BigInt
   name String
   slug String @unique @db.Citext
+  isActive Boolean @default(true) @map("is_active")
 
   @@map("specialty")
 }

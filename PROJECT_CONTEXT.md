@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Frontend foundation: design system + Header/Footer + home rediseñada, en vivo.
+> Última actualización: 2026-10-06 (UTC) — Sprint 3 listado: ClinicCard + filtros URL + paginación + estados, en vivo.
 
 ## 1. Estado actual
 
@@ -61,6 +61,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Legal (borradores) | `docs/legal.md` (advertencia + decisiones + checklist pre-lanzamiento) + páginas `/terminos` y `/privacidad` (Ley 19.628, cookies solo técnicas, placeholders de razón social/RUT/contacto) + footer con enlaces en layout; **sin revisión jurídica: no lanzar**; `tsc` web OK; `next build` OK (19 páginas) |
 | 2026-10-06 | Levantar todo (BD+API+web) | PostGIS + API (`node dist/main.js`, pid persistente) + web (`next start :3000`) como procesos detached; fix build: páginas admin-cliente con `useSearchParams` requieren `<Suspense>` (no `dynamic`), 3 páginas corregidas; verificado por HTTP: 8 rutas 200, listado Talcahuano (5), perfil CVC con JSON-LD/canonical/reporte, badge `◷ En revisión` para PENDING (listado+perfil); procesos: API `dist/main.js`, web `next start` (reiniciar tras cada `next build`) |
 | 2026-10-06 | Frontend foundation (prompt §§1-11) | Sin contradicciones con project_context (rating/autocomplete condicionales OK; `/veterinarias/[commune]` queda como adición futura); tokens Tailwind (brand teal, ink navy, paper, radius, shadow-card, sans) + `globals.css` (foco visible, selección); `components/ui` (Button, fields, Badge, VerificationBadge, Card, PriceDisplay CLP, Skeleton, Alert, Empty) + `types/domain.ts` sin `any`; `Header`/`Footer`/`Breadcrumbs` + skip-link + `metadataBase`/OG base en layout; home §11 (hero, SearchBar con sistema, servicios populares, comunas); `tsc`+build OK; web reiniciada, hero/header/skip verificados por HTTP |
+| 2026-10-06 | Sprint 3 listado (§§13-14,24-25) | `CatalogModule` (`GET /services|/specialties|/exams` de api.md; +`isActive` a 3 modelos + regenerate); `ClinicCard` (badges, comuna/km/abierto, precio FROM, ver perfil+comparar) + `CompareButton`/`CompareBar` (localStorage máx 3, sin estado global) + `FilterPanel` (todo en URL) + `Pagination` con links + `loading.tsx` skeletons; página reescrita (breadcrumbs, Alert error con reintento, Empty con hints); verificado en vivo (cards, filtros, migas, vacío); fix build OneDrive (limpiar `.next`); procesos reiniciados |
 
 ## 4. Próximo paso inmediato
 
