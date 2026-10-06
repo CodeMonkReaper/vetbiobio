@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Sprints 5-6 frontend: comparación responsive, rutas catálogo, tests y lint web.
+> Última actualización: 2026-10-06 (UTC) — App levantada (BD+API+web) con datos piloto en vivo.
 
 ## 1. Estado actual
 
@@ -68,8 +68,8 @@ docker-compose.yml (postgis), .env.example, ci.yml
 ## 4. Próximo paso inmediato
 
 1. Rotar `CLOUDINARY_API_SECRET` (circuló por chat) y re-verificar firma.
-2. Completar verificación telefónica de las 15 PENDING_REVIEW + cargar servicios/precios reales por clínica.
-3. Revisión jurídica de `docs/legal.md` + páginas antes de lanzar.
+2. Completar verificación telefónica de las 15 PENDING_REVIEW + cargar servicios/precios reales.
+3. Revisión jurídica antes de lanzar.
 
 ## 5. Reglas del log
 
