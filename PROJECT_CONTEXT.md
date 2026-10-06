@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Revisión general: MVP técnico completo y verificado; pendiente validación con datos reales.
+> Última actualización: 2026-10-06 (UTC) — Repo git inicializado con primer commit; falta definir remoto para push.
 
 ## 1. Estado actual
 
@@ -52,6 +52,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Premium/publicidad | `0008_monetization` (advertisement + premium_subscription con CHECKs, índices) + modelos Prisma + `PremiumModule` (`POST admin/monetization/subscriptions|advertisements`, guards, validación plan/placement/fechas, auditoría); flags `is_premium`/`is_sponsored` en search y perfil (solo campañas `ACTIVE` vigentes; premium no toca verificación); seed demo (Talcahuano PREMIUM, Concepción SPONSORED_CLINIC); verificado por HTTP (flags True/False correctos, 400 plan inválido, sub id 2 de prueba eliminada); badges `Patrocinado`/`★ Premium` en listado y perfil con nota de independencia; `validate`+`generate`+`tsc` api+web OK; `next build` OK |
 | 2026-10-06 | Deuda técnica: unit + CI + Sentry | Reglas puras testeables (`price-rules`, `common/slug`, `verification/transitions`) conectadas a servicios (precios cierra vigencia en 1 UPDATE con `previousValidUntil`; slugs vía `uniqueSlug`; verificación exige transición válida + evidencia); unit 9/9 (`test:unit`); CI reescrito (PostGIS service + `tsc` api/web + unit + migraciones/seeds vía `prisma db execute` en orden + e2e + builds; sin `lint` por configurar); orden CI validado en BD fresca `vetbiobio_ci` (33 comunas, 4 clínicas, `dermatologia` OK sin fix UTF-8, e2e 8/8, BD eliminada tras validar); Sentry backend (`@sentry/nestjs`, init solo con `SENTRY_DSN`); `tsc` OK |
 | 2026-10-06 | E2E + hardening prod | Harness Jest+supertest (`test:e2e`, 8 specs: buscar, geo+distancia, precios, perfil+histórico, 404, comparar+400, eventos+400, admin 401/login/cookie); BigInt centralizado en `common/bigint-json.ts` (main + setup e2e); fixes: `@nestjs/jwt@10` (v12 ESM-only rompía ts-jest), `@nestjs/testing@10`; `main.ts` exige `JWT_SECRET`/`DATABASE_URL` en prod; `infra/scripts/backup-db.ps1` verificado (dump 177KB + retención 7, `backups/` gitignored); scan sin secretos hardcodeados; `docs/deployment.md` (vars, orden migraciones, backup/restore, checklist); e2e final 8/8, `tsc` OK, eventos test limpiados |
+| 2026-10-06 | Repo git + primer commit | `git init -b main` + `.gitattributes` + commit `75a370d` (134 archivos); pre-commit sin fugas (`.env`, `apps/api/.env`, `backups/`, `node_modules` ignorados); remoto pendiente (sin `gh` en el equipo) |
 
 ## 4. Próximo paso inmediato
 
