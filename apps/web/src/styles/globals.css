@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+  /* Foco visible WCAG (§27): nunca solo color, siempre anillo. */
+  :focus-visible {
+    outline: 3px solid theme('colors.brand.400');
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: theme('colors.brand.200');
+  }
+}
