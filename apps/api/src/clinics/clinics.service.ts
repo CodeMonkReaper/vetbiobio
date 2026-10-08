@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { SearchClinicsDto } from './dto/search-clinics.dto';
 import { CreateClinicDto } from './dto/create-clinic.dto';
+import { AdminListClinicsDto, ClinicStatusValue } from './dto/admin-clinics.dto';
 import { ClinicsGeoRepository } from './clinics.geo.repository';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,9 +15,55 @@ export class ClinicsService {
     return this.geo.searchNearby(q);
   }
 
+  // Listado admin: todos los estados + comuna + aportes pendientes por clínica.
+  async adminList(q: AdminListClinicsDto) {
+    const page = q.page ?? 1;
+    const limit = Math.min(q.limit ?? 50, 100);
+    const conds: Prisma.Sql[] = [Prisma.sql`c.deleted_at IS NULL`];
+    if (q.status) conds.push(Prisma.sql`c.status = ${q.status}::clinic_status`);
+    if (q.q) conds.push(Prisma.sql`(c.name ILIKE ${'%' + q.q + '%'} OR c.slug ILIKE ${'%' + q.q + '%'})`);
+    const where = Prisma.join(conds, ' AND ');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows: any[] = await this.prisma.$queryRaw`
+      SELECT c.id::text AS id, c.slug, c.name, c.status, c.verification_status, c.verified_at,
+             c.created_at, c.updated_at, com.name AS commune, com.slug AS commune_slug,
+             (cl.clinic_id IS NOT NULL) AS has_location,
+             (SELECT count(*)::int FROM submission s WHERE s.clinic_id = c.id AND s.status = 'PENDING') AS pending_submissions,
+             (SELECT count(*)::int FROM report r WHERE r.clinic_id = c.id AND r.status = 'OPEN') AS open_reports
+      FROM clinic c
+      LEFT JOIN clinic_location cl ON cl.clinic_id = c.id
+      LEFT JOIN commune com ON com.id = cl.commune_id
+      WHERE ${where}
+      ORDER BY c.updated_at DESC
+      LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totals: any[] = await this.prisma.$queryRaw`SELECT count(*)::int AS total FROM clinic c WHERE ${where}`;
+    const total = totals[0]?.total ?? 0;
+    return { data: rows, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
+  // Publicar/despublicar/desactivar/cerrar. Publicar exige ubicación (el buscador hace JOIN).
+  async changeStatus(id: number, status: ClinicStatusValue, userId?: number | null) {
+    const before = await this.prisma.clinic.findUnique({ where: { id }, select: { id: true, status: true } });
+    if (!before) throw new NotFoundException('Clínica no existe');
+    if (status === 'ACTIVE') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const loc: any[] = await this.prisma.$queryRaw`SELECT 1 FROM clinic_location WHERE clinic_id = ${id}`;
+      if (!loc.length) throw new BadRequestException('No se puede publicar: la clínica no tiene ubicación');
+    }
+    const updated = await this.prisma.clinic.update({ where: { id }, data: { status } });
+    await this.audit.record({
+      userId: userId ?? null, action: status === 'ACTIVE' ? 'PUBLISH' : status === 'INACTIVE' ? 'DEACTIVATE' : 'UPDATE',
+      entityType: 'clinic', entityId: id, oldValues: { status: before.status }, newValues: { status },
+    });
+    return { data: { id: updated.id.toString(), slug: updated.slug, status: updated.status } };
+  }
+
   // Alta admin: clínica DRAFT + ubicación (el trigger sync_location genera GEOGRAPHY).
   async createDraft(dto: CreateClinicDto, userId?: number | null) {
     if (!this.prisma) return { queued: true, slug: slugify(dto.name) };
+    const commune = await this.prisma.commune.findFirst({ where: { cut: dto.communeCut }, select: { id: true } });
+    if (!commune) throw new BadRequestException('Comuna (CUT) inválida');
     const slug = await uniqueSlug(dto.name, async (s) => {
       const exists = await this.prisma.clinic.findUnique({ where: { slug: s } });
       return !!exists;
@@ -26,6 +74,7 @@ export class ClinicsService {
         data: {
           name: dto.name, slug, description: dto.description ?? null,
           phoneE164: dto.phone ?? null, website: dto.website ?? null,
+          email: dto.email ?? null, whatsappE164: dto.whatsapp ?? null,
           status: 'DRAFT', isEmergency: dto.isEmergency ?? false, is24h: dto.is24h ?? false,
         },
       });
@@ -94,7 +143,9 @@ export class ClinicsService {
                WHERE cp.clinic_id = c.id AND cp.is_active) pr), '[]') AS professionals,
              COALESCE((SELECT json_agg(h ORDER BY h.day_of_week, h.opening_time) FROM (
                SELECT day_of_week, opening_time, closing_time, is_closed, is_overnight, label, verification_status
-               FROM schedule WHERE clinic_id = c.id) h), '[]') AS schedules,
+               FROM schedule WHERE clinic_id = c.id
+                 AND (valid_from IS NULL OR valid_from <= (now() AT TIME ZONE 'America/Santiago')::date)
+                 AND (valid_until IS NULL OR valid_until >= (now() AT TIME ZONE 'America/Santiago')::date)) h), '[]') AS schedules,
              COALESCE((SELECT json_agg(ph ORDER BY ph.sort_order) FROM (
                SELECT url, alt_text, is_primary, sort_order FROM clinic_photo WHERE clinic_id = c.id) ph), '[]') AS photos,
              COALESCE((SELECT json_agg(a.species) FROM clinic_animal a WHERE a.clinic_id = c.id), '[]') AS animals,

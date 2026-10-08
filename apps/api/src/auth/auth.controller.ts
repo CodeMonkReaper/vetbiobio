@@ -1,8 +1,10 @@
-import { Controller, Post, Body, Res, HttpCode } from '@nestjs/common';
+import { Controller, Post, Get, Body, Res, HttpCode, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { CurrentUser, SessionUser } from './current-user.decorator';
 
 @Controller('admin/auth')
 export class AuthController {
@@ -25,5 +27,12 @@ export class AuthController {
     const secure = (process.env.NODE_ENV ?? '') === 'production';
     res.setHeader('Set-Cookie', AuthService.clearCookie(secure));
     return { data: { ok: true } };
+  }
+
+  // Sesión actual (lo usa el layout del panel admin para proteger rutas).
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@CurrentUser() user: SessionUser) {
+    return { data: { id: user.sub, email: user.email, role: user.role } };
   }
 }

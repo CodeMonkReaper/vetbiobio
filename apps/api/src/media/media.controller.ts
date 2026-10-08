@@ -4,6 +4,7 @@ import { SignUploadDto, AttachPhotoDto } from './dto/media.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CurrentUserId } from '../auth/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN', 'EDITOR')
@@ -17,7 +18,7 @@ export class MediaController {
   }
 
   @Post('photos')
-  attach(@Body() dto: AttachPhotoDto) {
-    return this.media.attachPhoto({ ...dto });
+  attach(@Body() dto: AttachPhotoDto, @CurrentUserId() userId: number | null) {
+    return this.media.attachPhoto({ ...dto, userId });
   }
 }

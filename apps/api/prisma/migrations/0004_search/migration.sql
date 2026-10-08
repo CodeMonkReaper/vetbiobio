@@ -21,7 +21,6 @@ BEGIN
       setweight(to_tsvector('es_unaccent', coalesce(unaccent(coalesce(com.name, '')), '')), 'B') ||
       setweight(to_tsvector('es_unaccent', coalesce(unaccent(coalesce(string_agg(DISTINCT s.name, ' '), '')), '')), 'C') ||
       setweight(to_tsvector('es_unaccent', coalesce(unaccent(coalesce(string_agg(DISTINCT e.name, ' '), '')), '')), 'C') ||
-      setweight(to_tsvector('es_unaccent', coalesce(unaccent(coalesce(string_agg(DISTINCT sp.name, ' '), '')), '')), 'C') ||
       setweight(to_tsvector('es_unaccent', coalesce(unaccent(coalesce(c2.description, '')), '')), 'D')
     FROM clinic c2
     LEFT JOIN clinic_location cl ON cl.clinic_id = c2.id
@@ -30,9 +29,6 @@ BEGIN
     LEFT JOIN service s ON s.id = cs.service_id AND s.is_active
     LEFT JOIN clinic_exam ce ON ce.clinic_id = c2.id AND ce.is_available
     LEFT JOIN exam e ON e.id = ce.exam_id AND e.is_active
-    LEFT JOIN clinic_professional cp ON cp.clinic_id = c2.id AND cp.is_active
-    LEFT JOIN professional_specialty ps ON ps.professional_id = cp.professional_id
-    LEFT JOIN specialty sp ON sp.id = ps.specialty_id AND sp.is_active
     WHERE c2.id = p_clinic_id
     GROUP BY c2.name, c2.description, com.name
   ) WHERE c.id = p_clinic_id;
@@ -61,22 +57,6 @@ CREATE TRIGGER trg_search_cservice AFTER INSERT OR UPDATE OR DELETE ON clinic_se
 DROP TRIGGER IF EXISTS trg_search_cexam ON clinic_exam;
 CREATE TRIGGER trg_search_cexam AFTER INSERT OR UPDATE OR DELETE ON clinic_exam
   FOR EACH ROW EXECUTE FUNCTION trg_child_search();
-DROP TRIGGER IF EXISTS trg_search_cprof ON clinic_professional;
-CREATE TRIGGER trg_search_cprof AFTER INSERT OR UPDATE OR DELETE ON clinic_professional
-  FOR EACH ROW EXECUTE FUNCTION trg_child_search();
-
--- Cambios en especialidades de un profesional refrescan sus clínicas.
-CREATE OR REPLACE FUNCTION trg_pspec_search() RETURNS TRIGGER AS $$
-DECLARE pid BIGINT;
-BEGIN
-  pid := COALESCE(NEW.professional_id, OLD.professional_id);
-  PERFORM refresh_clinic_search(cp.clinic_id)
-  FROM clinic_professional cp WHERE cp.professional_id = pid AND cp.is_active;
-  IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
-END $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_search_pspec ON professional_specialty;
-CREATE TRIGGER trg_search_pspec AFTER INSERT OR UPDATE OR DELETE ON professional_specialty
-  FOR EACH ROW EXECUTE FUNCTION trg_pspec_search();
 
 CREATE INDEX IF NOT EXISTS clinic_search_gin ON clinic USING GIN (search_tsv);
 

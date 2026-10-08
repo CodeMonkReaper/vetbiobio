@@ -110,6 +110,7 @@ model Clinic {
   events             ClinicEvent[]
   advertisements     Advertisement[]
   subscriptions      PremiumSubscription[]
+  submissions        Submission[]
 
   @@map("clinic")
 }
@@ -204,6 +205,10 @@ model ClinicServicePrice {
   currency        String    @default("CLP") @db.Char(3)
   validFrom       DateTime  @default(now()) @map("valid_from") @db.Date
   validUntil      DateTime? @map("valid_until") @db.Date
+  source             VerificationSource?
+  verificationStatus VerificationStatus  @default(UNVERIFIED) @map("verification_status")
+  verifiedAt         DateTime?           @map("verified_at") @db.Timestamptz
+  notes              String?
   clinicService   ClinicService @relation(fields: [clinicServiceId], references: [id], onDelete: Cascade)
 
   @@map("clinic_service_price")
@@ -218,6 +223,10 @@ model ClinicExamPrice {
   currency     String    @default("CLP") @db.Char(3)
   validFrom    DateTime  @default(now()) @map("valid_from") @db.Date
   validUntil   DateTime? @map("valid_until") @db.Date
+  source             VerificationSource?
+  verificationStatus VerificationStatus  @default(UNVERIFIED) @map("verification_status")
+  verifiedAt         DateTime?           @map("verified_at") @db.Timestamptz
+  notes              String?
   clinicExam   ClinicExam @relation(fields: [clinicExamId], references: [id], onDelete: Cascade)
 
   @@map("clinic_exam_price")
@@ -233,6 +242,7 @@ enum VerificationSource {
   PUBLIC_SOURCE
   ADMIN_RESEARCH
   OTHER
+  COMMUNITY
 
   @@map("verification_source")
 }
@@ -367,4 +377,30 @@ model PremiumSubscription {
   clinic    Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
   @@map("premium_subscription")
+}
+
+// Aportes ciudadanos moderados (ADR-006, migración 0009_submissions).
+model Submission {
+  id                BigInt    @id @default(autoincrement()) @db.BigInt
+  trackingCode      String    @unique @map("tracking_code")
+  type              String
+  clinicId          BigInt?   @map("clinic_id") @db.BigInt
+  payload           Json
+  message           String?
+  evidenceUrl       String?   @map("evidence_url")
+  submitterName     String?   @map("submitter_name")
+  submitterEmail    String?   @map("submitter_email") @db.Citext
+  consentAt         DateTime? @map("consent_at") @db.Timestamptz
+  submitterHash     String?   @map("submitter_hash")
+  status            String    @default("PENDING")
+  reviewedBy        BigInt?   @map("reviewed_by") @db.BigInt
+  reviewedAt        DateTime? @map("reviewed_at") @db.Timestamptz
+  reviewNotes       String?   @map("review_notes")
+  appliedEntityType String?   @map("applied_entity_type")
+  appliedEntityId   BigInt?   @map("applied_entity_id") @db.BigInt
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  clinic            Clinic?   @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+
+  @@map("submission")
 }

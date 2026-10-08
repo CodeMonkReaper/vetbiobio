@@ -7,7 +7,7 @@ coverage/
 .env.local
 backups/
 *.log
-e2e/output/
+**/e2e/output/
 test-results/
 playwright-report/
 .DS_Store

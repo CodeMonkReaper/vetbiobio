@@ -8,48 +8,54 @@ export async function generateMetadata() {
 // BORRADOR sin revisión jurídica (Ley 19.628). No usar en producción sin abogado.
 export default function Privacidad() {
   return (
-    <main>
-      <h1>Política de privacidad y cookies (borrador)</h1>
-      <p><small>Última actualización: octubre 2026. Responsable: [RAZÓN SOCIAL, RUT, domicilio, EMAIL].</small></p>
+    <main className="max-w-3xl mx-auto my-12 px-6 py-8 bg-white rounded-2xl border border-slate-200/80 shadow-sm space-y-6 text-slate-700 font-sans leading-relaxed">
+      <h1 className="text-3xl font-bold text-slate-900">Política de Privacidad y Tratamiento de Datos</h1>
+      <p className="text-xs text-slate-400">
+        Última actualización: octubre 2026. Responsable: Directorio VetBiobío.
+      </p>
 
-      <h2>1. Principio: mínima recolección</h2>
-      <p>VetBiobío no crea cuentas de dueños de mascotas y no solicita datos personales para buscar,
-      comparar o contactar establecimientos (el contacto ocurre por teléfono/WhatsApp/sitio del
-      establecimiento, fuera de esta plataforma).</p>
+      <section className="space-y-2">
+        <h2 className="text-lg font-bold text-slate-900">1. Principio: Mínima Recolección</h2>
+        <p className="text-sm">
+          VetBiobío no crea cuentas públicas para dueños de mascotas ni exige registro obligatorio para buscar,
+          comparar o contactar establecimientos veterinarios. Todo contacto se realiza de forma directa entre el usuario y la clínica.
+        </p>
+      </section>
 
-      <h2>2. Datos que sí tratamos</h2>
-      <ul>
-        <li><strong>Reportes de errores:</strong> motivo y mensaje libre. Pedimos no incluir datos
-        personales; si los incluyen, los trataremos solo para gestionar el reporte.</li>
-        <li><strong>Eventos de uso agregados:</strong> vistas y clics contabilizados sin identidad
-        (sin IP almacenada, sin cookies de terceros).</li>
-        <li><strong>Sesión administrativa:</strong> cookie técnica de inicio de sesión para el panel
-        interno, solo para administradores.</li>
-        <li><strong>Datos de contacto de clínicas:</strong> información pública o entregada por los
-        establecimientos para su ficha (teléfonos, direcciones, sitios web).</li>
-      </ul>
+      <section className="space-y-2">
+        <h2 className="text-lg font-bold text-slate-900">2. Aportes Ciudadanos y Colaboraciones (Ley 19.628)</h2>
+        <p className="text-sm">
+          Cualquier persona puede proponer datos sobre veterinarias, precios o servicios mediante nuestro formulario de aportes:
+        </p>
+        <ul className="list-disc pl-5 text-sm space-y-1">
+          <li><strong>Datos Opcionales:</strong> El nombre y correo electrónico son completamente voluntarios. Si no se entregan, el aporte se procesa de forma anónima.</li>
+          <li><strong>Consentimiento Explicito:</strong> Si el usuario decide suministrar su correo electrónico, se exige una casilla de autorización expresa para que el equipo moderador pueda contactarlo únicamente si se requiere clarificar el aporte.</li>
+          <li><strong>Códigos de Seguimiento:</strong> A cada envío se le asigna un identificador público único (ej. <code>VBB-XXXX</code>) que permite consultar el estado de moderación sin exponer en ningún momento la identidad del remitente.</li>
+          <li><strong>Seguridad de Datos:</strong> No se almacenan direcciones IP en crudo; se generan resúmenes criptográficos con hash unidireccional.</li>
+        </ul>
+      </section>
 
-      <h2>3. Finalidades y base</h2>
-      <p>Mantener el directorio actualizado, medir qué información es útil y operar el servicio.
-      No vendemos datos ni hacemos publicidad comportamental.</p>
+      <section className="space-y-2">
+        <h2 className="text-lg font-bold text-slate-900">3. Datos de Reportes y Navegación</h2>
+        <ul className="list-disc pl-5 text-sm space-y-1">
+          <li><strong>Reportes de inconsistencias:</strong> Motivo y detalle técnico, sin solicitud de datos personales.</li>
+          <li><strong>Métricas de uso:</strong> Conteo de eventos agregado y anónimo, sin cookies de seguimiento de terceros ni publicidad comportamental.</li>
+        </ul>
+      </section>
 
-      <h2>4. Cookies</h2>
-      <p>Usamos solo cookies técnicas: sesión del panel admin y preferencias mínimas de la
-      interfaz. <strong>No usamos cookies de analítica ni publicidad de terceros.</strong> Si eso
-      cambia (p. ej. Google Analytics), actualizaremos esta política y pediremos consentimiento
-      cuando corresponda.</p>
+      <section className="space-y-2">
+        <h2 className="text-lg font-bold text-slate-900">4. Cookies Técnicas</h2>
+        <p className="text-sm">
+          Utilizamos únicamente cookies estrictamente necesarias para la sesión de los administradores y editores autorizados. No utilizamos cookies publicitarias.
+        </p>
+      </section>
 
-      <h2>5. Derechos (Ley 19.628)</h2>
-      <p>Puedes ejercer tus derechos de acceso, rectificación, cancelación y oposición escribiendo
-      a [EMAIL], indicando tu identidad y el dato en cuestión. Responderemos en los plazos legales.</p>
-
-      <h2>6. Conservación y seguridad</h2>
-      <p>Conservamos los datos el tiempo necesario para su finalidad, con medidas razonables de
-      seguridad (cifrado en tránsito, accesos restringidos, respaldos). Ningún sistema es
-      infalible; ante incidentes relevantes avisaremos según la normativa.</p>
-
-      <h2>7. Cambios</h2>
-      <p>Publicaremos aquí cualquier cambio con su fecha de vigencia.</p>
+      <section className="space-y-2">
+        <h2 className="text-lg font-bold text-slate-900">5. Derechos del Titular</h2>
+        <p className="text-sm">
+          Conforme a la Ley 19.628 sobre protección de la vida privada, puedes solicitar en cualquier momento la modificación o eliminación de datos asociados a tus aportes dirigiéndote a nuestro canal de contacto.
+        </p>
+      </section>
     </main>
   );
 }
