@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         });
       })
       .catch((err) => {
-        if (err.message === 'UNAUTHORIZED') {
+        if (err.message === 'UNAUTHORIZED' && pathname !== '/admin/diseno') {
           router.push('/admin/login');
         }
       });
@@ -70,6 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/verificar', label: 'Verificaciones', icon: '🛡️' },
     { href: '/admin/calidad', label: 'Calidad de Datos', icon: '🎯' },
     { href: '/admin/importar', label: 'Importación Masiva', icon: '📦' },
+    { href: '/admin/diseno', label: 'Sistema de Diseño', icon: '🎨' },
   ];
 
   return (

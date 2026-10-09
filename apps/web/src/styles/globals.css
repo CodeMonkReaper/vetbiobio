@@ -3,18 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
+    color-scheme: light;
   }
+
   body {
-    @apply bg-paper text-ink font-sans antialiased;
+    @apply bg-paper text-ink font-sans antialiased selection:bg-brand-200 selection:text-ink;
   }
-  /* Foco visible WCAG (§27): nunca solo color, siempre anillo. */
+
+  /* Foco visible WCAG 2.2 (§27): nunca solo color, siempre anillo con alto contraste (6.31:1) */
   :focus-visible {
-    outline: 3px solid theme('colors.brand.400');
+    outline: 3px solid theme('colors.brand.700');
     outline-offset: 2px;
   }
-  ::selection {
-    background: theme('colors.brand.200');
+}
+
+@layer utilities {
+  /* Números tabulares para alineación precisa de precios CLP (§16) */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Reducción de movimiento para usuarios con sensibilidad vestibular */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
