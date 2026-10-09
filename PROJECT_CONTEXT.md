@@ -6,8 +6,8 @@
 
 ## 1. Estado actual
 
-* Etapa: MVP técnico completo + Ciclo de moderación ciudadana (Aportes comunitarios Ley 19.628). Pendiente: validación piloto con clínicas reales.
-* Cobertura MVP (§81 project_context): público ✓ (home/buscador/listado/filtros/mapa-embed/perfil/precios/profesionales/comparación/verificación/aportar/consultar-estado) · admin ✓ (login/dashboard-kpis/inbox-aportes/moderación-transaccional/gestión-clínicas-estados/verificaciones/reportes/precios/horarios/fotos/auditoría-actor) · fuera-MVP respetado (sin reservas/pagos/reseñas/app nativa).
+* Etapa: Portafolio Técnico de Nivel de Producción Completo (Fases 0 a 4 implementadas y verificadas).
+* Cobertura MVP (§81 project_context): público ✓ (home/buscador/listado/filtros/mapa-embed/perfil/precios/profesionales/comparación/verificación/aportar/consultar-estado/badge-calidad) · admin ✓ (login/dashboard-kpis/inbox-aportes/moderación-transaccional/gestión-clínicas-estados/verificaciones/reportes/precios/horarios/fotos/auditoría-actor/calidad-de-datos/importación-masiva-staging) · fuera-MVP respetado (sin reservas/pagos/reseñas/app nativa).
 * Stack congelado: Next.js 14 + NestJS 10 + PostgreSQL 16/PostGIS 3.4 + Prisma 5 + pnpm 9 + Docker.
 * Decisiones aplicadas:
   1. Verificación por campo (cada registro lleva status/verified_at/source), sin badge global único.
@@ -16,6 +16,10 @@
   4. Precios append-only (`valid_from/valid_until`) + vistas `v_current_*`, `INTEGER CLP`.
   5. Geo: `latitude/longitude` + `location GEOGRAPHY` vía trigger, queries en `*.geo.repository.ts` con `$queryRaw`.
   6. Aportes ciudadanos moderados (ADR-006): código de seguimiento `VBB-XXXX` sin PII pública, consentimiento explícito Ley 19.628 para correo, aplicación transaccional con fuente `COMMUNITY` y estado `UNVERIFIED`, auditoría de actor real (`userId`).
+  7. Procesamiento Asíncrono de Ingesta en PostgreSQL con `SKIP LOCKED` (ADR-007): lotes en `import_batch_row`, worker sin Redis, dry-run diff engine, aplicación transaccional con auditoría.
+  8. Deduplicación Híbrida 50/30/20 PostGIS (ADR-008): distancia física en metros (`ST_DWithin` WGS84) + trigramas pg_trgm en nombres + E.164 chileno (+569 / +5641).
+  9. Motor de Calidad de Datos Declarativo (ADR-009): 7 reglas desacopladas `QualityRule`, huella determinista SHA-256 en índice parcial, auto-healing de incidencias subsanadas, score explicable con disclaimer legal visible.
+  10. Observabilidad y Endurecimiento: Correlation ID middleware (`x-correlation-id`), deep healthcheck en `/health` (DB ping, latencia ms, versión PostGIS, memoria).
 * Toolchain verificado: node v24.18.0, pnpm 9.0.0, docker 29.6.1.
 
 ## 2. Estructura creada
@@ -70,12 +74,17 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Playwright: mapa OK | `@playwright/test` + Chromium + `playwright.config.ts` + `e2e/smoke.spec.ts` (home, listado, perfil con canvas/iframe + screenshots, sin errores de página) + script `test:e2e` web; evidencia: home y mapa perfectos (calles de Concepción, río, pin teal); el "blanco" era render lento de SwiftShader (12s de espera lo resuelve); red 24/24 a Mapbox 200, WebGL1 OK; `0009` ahora publica a ACTIVE (era paso manual); CI alineado a piloto (import CSV + 0009) + Playwright con servidores; `e2e/output/` gitignored |
 | 2026-10-06 | Fix estilos Tailwind | Causa: faltaba `postcss.config.js` (CSS salía crudo, 283B) + `.next` con locks de OneDrive dificultó el diagnóstico (config con ruta explícita `__dirname` + rebuild limpio con web detenida → CSS 14.5KB procesado, servido verificado); lección documentada en `docs/deployment.md` §6 |
 | 2026-10-08 | Aportes ciudadanos + Moderación Admin | Migración `0009_submissions` (tabla `submission`, enum `COMMUNITY`); fix `0004_search` (eliminadas referencias a tabla inexistente `clinic_professional`); backend NestJS: módulo `Submissions` público (`POST /submissions`, `GET /submissions/track/:code`), módulo admin (`AdminSubmissionsController` con `/admin/overview`, listado, detalle, actualización, aprobación transaccional por tipo y rechazo con notas), trazabilidad con actor real (`userId`) en `AuditService`, borrado de 10 carpetas vacías en `apps/api/src`; frontend Next.js: formulario `/aportar` (8 tipos, evidencia, consentimiento Ley 19.628, tracking code `VBB-XXXX`), `/aportar/estado` (consulta pública sin PII), fix parámetro `clinicSlug` en `/reportar`, nuevo layout `/admin/layout.tsx` con sidebar y badges dinámicos, `/admin` dashboard con KPIs, `/admin/aportes` bandeja con filtros, `/admin/aportes/[id]` ficha de moderación y aprobación, `/admin/clinics` con soporte para todos los estados (`ACTIVE`/`DRAFT`/`INACTIVE`/`CLOSED`), `/admin/reportes` modernizado, actualización de `/privacidad`, fix `useSearchParams` con `<Suspense>`; verificación E2E de ciclo completo: envío de aporte → código → login admin → overview → aprobación transaccional → auditoría con actor `userId: 1` → limpieza de test data; `nest build` y `next build` OK (26 páginas). |
+| 2026-10-08 | Fase 0: Auditoría P0/P1 y Plan de Integración | `docs/audit/00-discovery.md` (8 hallazgos P0/P1 de consistencia y seguridad), `docs/integration-plan.md` con 5 fases estratégicas de producción |
+| 2026-10-08 | Fase 1: Corrección de Hallazgos P0/P1 | Corrección atómica en `$transaction` para moderación (eliminación de TOCTOU), resolución de discrepancia de clave primaria `clinic_id` vs `id`, Throttler por endpoint, honeypot anti-spam, tests unitarios y de concurrencia |
+| 2026-10-08 | Fase 2: Motor Calidad de Datos & Auto-Healing | Migración `0010_data_quality`, 7 reglas desacopladas `QualityRule`, normalizador telefónico E.164 chileno (+569 / +5641), huella SHA-256 en índice parcial, auto-healing de incidencias resueltas, scoring ponderado con disclaimer legal visible, scheduler diario (cron 03:00 AM), panel `/admin/calidad` y badge de calidad en ficha pública |
+| 2026-10-08 | Fase 3: Ingesta Masiva y Deduplicación PostGIS | Migración `0011_import_pipeline` (`import_batch`, `import_batch_row`), cola asíncrona nativa en PostgreSQL 16 con `SELECT ... FOR UPDATE SKIP LOCKED` (sin Redis), deduplicador multicriterio 50/30/20 (PostGIS `ST_DWithin` + trigramas `pg_trgm` + E.164), diff engine, aplicación transaccional con auditoría, UI administrativa `/admin/importar` con subida CSV y visor de diferencias |
+| 2026-10-08 | Fase 4: Portafolio, Observabilidad y Hardening | Middleware `CorrelationIdMiddleware` (`x-correlation-id`), health check profundo (`/health` con DB ping, latencia ms, versión PostGIS, memoria), arquitectura documentada en `ADR-007`, `ADR-008`, `ADR-009`, `README.md` reescrito con diagramas Mermaid y matriz de hallazgos para evaluación técnica en 10 minutos |
 
 ## 4. Próximo paso inmediato
 
-1. Rotar `CLOUDINARY_API_SECRET` (circuló por chat) y re-verificar firma.
-2. Completar verificación telefónica de las 15 PENDING_REVIEW + cargar servicios/precios reales.
-3. Revisión jurídica antes de lanzar.
+1. Ejecutar piloto de verificación telefónica de las 15 clínicas pendientes (`PENDING_REVIEW`).
+2. Completar revisión legal formal previa al despliegue en producción con tráfico real.
+3. Rotar credenciales en producción (`CLOUDINARY_API_SECRET`, `JWT_SECRET`).
 
 ## 5. Reglas del log
 
