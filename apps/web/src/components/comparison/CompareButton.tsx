@@ -16,8 +16,10 @@ function read(): string[] {
   }
 }
 
-// Selección de comparación en localStorage (sin estado global, §42).
-// La página /comparar lee ?slugs=.
+/**
+ * Botón accesible para agregar o quitar una clínica del comparador (§42).
+ * Touch target garantizado (44px), indicador aria-pressed y foco visible.
+ */
 export function CompareButton({ slug, name }: { slug: string; name: string }) {
   const [selected, setSelected] = useState(false);
 
@@ -30,6 +32,7 @@ export function CompareButton({ slug, name }: { slug: string; name: string }) {
     const next = current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug].slice(0, MAX);
     localStorage.setItem(KEY, JSON.stringify(next));
     setSelected(next.includes(slug));
+    window.dispatchEvent(new Event('storage'));
   }
 
   return (
@@ -38,13 +41,23 @@ export function CompareButton({ slug, name }: { slug: string; name: string }) {
       onClick={toggle}
       aria-pressed={selected}
       aria-label={`${selected ? 'Quitar' : 'Agregar'} ${name} de la comparación`}
-      className="inline-flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-2 font-medium hover:border-brand-500"
+      className={`inline-flex min-h-[44px] items-center justify-center rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700 ${
+        selected
+          ? 'border-brand-500 bg-brand-50 text-brand-800 shadow-sm hover:bg-brand-100'
+          : 'border-border bg-surface text-ink hover:border-border-hover hover:bg-surface-alt'
+      }`}
     >
-      {selected ? '✓ Comparando' : 'Comparar'}
+      <span aria-hidden="true" className="mr-1.5 font-bold">
+        {selected ? '✓' : '⇄'}
+      </span>
+      <span>{selected ? 'Comparando' : 'Comparar'}</span>
     </button>
   );
 }
 
+/**
+ * Barra flotante accesible de comparación territorial (§42).
+ */
 export function CompareBar() {
   const [slugs, setSlugs] = useState<string[]>([]);
 
@@ -55,7 +68,6 @@ export function CompareBar() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // Refresca al volver a la pestaña (mismo-tab no dispara storage).
   useEffect(() => {
     const onFocus = () => setSlugs(read());
     window.addEventListener('focus', onFocus);
@@ -63,16 +75,38 @@ export function CompareBar() {
   }, []);
 
   if (slugs.length < 2) return null;
+
   return (
-    <div className="sticky bottom-4 mx-auto flex w-fit items-center gap-3 rounded-lg border border-brand-200 bg-white px-4 py-2 shadow-card">
-      <span className="text-sm">{slugs.length} para comparar</span>
+    <div
+      role="region"
+      aria-label="Barra de comparación de clínicas"
+      className="sticky bottom-6 z-30 mx-auto flex w-fit max-w-[90vw] items-center gap-3 rounded-2xl border border-brand-300 bg-surface px-4 py-2.5 shadow-lg backdrop-blur-md"
+    >
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800" aria-hidden="true">
+          {slugs.length}
+        </span>
+        <span className="text-xs font-medium text-ink">
+          {slugs.length === 2 ? '2 clínicas seleccionadas' : '3 clínicas (máximo)'}
+        </span>
+      </div>
+
       <Link
         href={`/comparar?slugs=${slugs.join(',')}`}
-        className="rounded bg-brand-600 px-4 py-1.5 font-medium text-white hover:bg-brand-700"
+        className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700"
       >
-        Comparar
+        Comparar ahora &rarr;
       </Link>
-      <button type="button" className="text-sm text-ink-soft hover:text-ink" onClick={() => { localStorage.removeItem(KEY); setSlugs([]); }}>
+
+      <button
+        type="button"
+        className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-ink-mute transition hover:text-ink focus-visible:rounded"
+        onClick={() => {
+          localStorage.removeItem(KEY);
+          setSlugs([]);
+          window.dispatchEvent(new Event('storage'));
+        }}
+      >
         Limpiar
       </button>
     </div>
