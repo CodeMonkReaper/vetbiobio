@@ -139,6 +139,32 @@ El proyecto documenta formalmente todas sus decisiones técnicas clave:
 
 ---
 
+## 🎨 Frontend & Sistema de Diseño Accesible (WCAG 2.2 AA)
+
+El frontend (`apps/web`) fue diseñado bajo una dirección de producto **"Cálido y Confiable"**, priorizando a tutores de mascotas que acceden desde el celular y frecuentemente bajo situaciones de **urgencia médica** (búsqueda rápida de clínicas abiertas, guardias nocturnas o exámenes diagnósticos).
+
+```mermaid
+flowchart LR
+    Tokens["Tokens Semánticos\n(Teal Bosque, ink, status)"] --> Comp["Componentes Base\n(Button, Badge, Field, Modal)"]
+    Comp --> Pages["Vistas Refactorizadas\n(Home, Directorio, Ficha, Aporte, Admin)"]
+    Pages --> Audit["WCAG 2.2 AA\n(Contraste >= 5.6:1, 44px Touch, Focus Trap)"]
+```
+
+### Características Principales del Sistema de Diseño:
+- **Catálogo Interactivo en Vivo:** Disponible en [`/admin/diseno`](http://localhost:3000/admin/diseno) para inspección inmediata de todos los componentes, tokens, modales interactivos y pruebas de contraste.
+- **Contraste Cromático Estricto:** Eliminación de violaciones `slate-400` (2.45:1). Se utiliza `ink-soft` (`#33475b`, **8.24:1**) e `ink-mute` (`#4a6177`, **5.61:1**) superando con holgura el umbral WCAG 2.2 AA (4.5:1).
+- **Target Size Móvil (≥ 44x44px):** Todo botón, casilla de verificación, chip de comuna y control de paginación cumple con el Criterio 2.5.8 de WCAG 2.2, garantizando pulsaciones sin frustración en pantallas táctiles.
+- **Doble Codificación Universal (§15):** Los estados de verificación territorial nunca transmiten significado únicamente mediante color; combinan símbolo unívoco (`✓`, `◷`, `⚠`, `✕`, `ⓘ`) + texto explícito + contraste tonal.
+- **Diálogo Modal Accesible:** Máquina de estados con **Focus Trap** (`Tab`/`Shift+Tab`), tecla `Escape`, `aria-modal="true"` y restauración del foco al botón desencadenador (`activeElement`).
+- **Números Tabulares (`tabular-nums`):** Precios en pesos chilenos (`$XX.XXX CLP`) alineados columnarmente para comparaciones ágiles.
+- **Sensibilidad Vestibular:** Soporte nativo para `@media (prefers-reduced-motion: reduce)`, mitigando mareos y sobreestimulación visual.
+- **Documentación Completa:**
+  - [`00-diagnostico.md`](docs/ui/00-diagnostico.md) — Auditoría inicial de sólo lectura.
+  - [`01-sistema-de-diseno.md`](docs/ui/01-sistema-de-diseno.md) — Especificación formal de tokens, ratios y componentes.
+  - [`02-verificacion-portafolio.md`](docs/ui/02-verificacion-portafolio.md) — Evidencias, checklist WCAG 2.2 AA y guía de defensa en entrevistas técnicas.
+
+---
+
 ## 🛠️ Puesta en Marcha Rápida (Local)
 
 ### Requisitos
