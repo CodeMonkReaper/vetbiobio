@@ -79,7 +79,8 @@ export class ClinicsGeoRepository {
                AND (ps.expires_at IS NULL OR ps.expires_at > now())) AS is_premium,
              EXISTS (SELECT 1 FROM advertisement a WHERE a.clinic_id = c.id AND a.status = 'ACTIVE'
                AND a.placement = 'SPONSORED_CLINIC' AND a.start_at <= now() AND a.end_at > now()) AS is_sponsored,
-             (SELECT min(p.min_amount) FROM v_current_service_price p JOIN clinic_service cs ON cs.id = p.clinic_service_id WHERE cs.clinic_id = c.id) AS min_price
+             (SELECT min(p.min_amount) FROM v_current_service_price p JOIN clinic_service cs ON cs.id = p.clinic_service_id WHERE cs.clinic_id = c.id) AS min_price,
+             (SELECT ph.url FROM clinic_photo ph WHERE ph.clinic_id = c.id ORDER BY ph.is_primary DESC, ph.sort_order ASC LIMIT 1) AS cover_photo_url
       FROM clinic c
       JOIN clinic_location cl ON cl.clinic_id = c.id
       LEFT JOIN commune com ON com.id = cl.commune_id

@@ -32,6 +32,8 @@ const TYPE_LABELS: Record<string, string> = {
   REPORT_CLOSURE: 'Reporte de Cierre',
   NEW_SERVICE: 'Nuevo Servicio',
   UPDATE_PRICE: 'Actualizar Precios',
+  PRICE: 'Actualizar Precios',
+  SCHEDULE: 'Actualizar Horarios',
   NEW_PROMOTION: 'Nueva Promoción',
   CORRECT_DATA: 'Corregir Datos',
   OTHER: 'Otro / Consulta',

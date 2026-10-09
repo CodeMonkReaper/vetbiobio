@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ClinicSummary } from '@/types/domain';
 import { Card, FromPrice } from '@/components/ui/display';
 import { Badge, VerificationBadge } from '@/components/ui/Badge';
@@ -6,8 +7,8 @@ import { CompareButton } from '@/components/comparison/CompareButton';
 
 /**
  * Tarjeta de clínica veterinaria (§14):
- * Muestra estado de verificación con doble codificación, arancel desde en formato tabular-nums,
- * estado horario y acciones táctiles de al menos 44px.
+ * Muestra fotografía de portada, estado de verificación con doble codificación,
+ * arancel desde en formato tabular-nums, estado horario y acciones táctiles de al menos 44px.
  */
 export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
   const href = `/veterinarias/${clinic.commune_slug}/${clinic.slug}`;
@@ -15,6 +16,21 @@ export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
   return (
     <Card hoverable className="flex h-full flex-col justify-between p-5">
       <div className="space-y-3">
+        {clinic.cover_photo_url && (
+          <div className="-mx-5 -mt-5 mb-3 overflow-hidden rounded-t-xl bg-surface-alt">
+            <Link href={href} tabIndex={-1} aria-hidden="true">
+              <Image
+                src={clinic.cover_photo_url}
+                alt={`Instalaciones de ${clinic.name}`}
+                width={480}
+                height={192}
+                className="h-36 w-full object-cover transition duration-300 hover:scale-105"
+                loading="lazy"
+              />
+            </Link>
+          </div>
+        )}
+
         {/* Cabecera de Estados y Badges */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <VerificationBadge

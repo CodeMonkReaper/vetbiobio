@@ -29,6 +29,7 @@ export interface ClinicSummary {
   open_now: boolean | null;
   km: number | null;
   min_price: number | null;
+  cover_photo_url?: string | null;
 }
 
 export interface ProfileItem {

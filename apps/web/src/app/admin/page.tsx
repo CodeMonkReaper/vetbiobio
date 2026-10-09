@@ -41,6 +41,8 @@ const SUBMISSION_TYPE_TRANSLATIONS: Record<string, string> = {
   NEW_CLINIC: 'Nueva clínica',
   UPDATE_CLINIC: 'Actualización',
   UPDATE_PRICE: 'Aranceles',
+  PRICE: 'Arancel',
+  SCHEDULE: 'Horario',
   NEW_SERVICE: 'Nuevo servicio',
   REPORT_CLOSURE: 'Cierre',
   NEW_PROMOTION: 'Promoción',

@@ -27,6 +27,8 @@ const TYPE_TRANSLATIONS: Record<string, string> = {
   NEW_CLINIC: 'Nueva clínica veterinaria',
   UPDATE_CLINIC: 'Actualización de clínica existente',
   UPDATE_PRICE: 'Actualización de aranceles',
+  PRICE: 'Actualización de arancel',
+  SCHEDULE: 'Actualización de horarios',
   NEW_SERVICE: 'Nuevo servicio o especialidad',
   REPORT_CLOSURE: 'Cierre o cese de operaciones',
   NEW_PROMOTION: 'Campaña o beneficio',
