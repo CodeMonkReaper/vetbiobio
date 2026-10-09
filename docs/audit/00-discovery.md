@@ -1,9 +1,9 @@
-# Informe de Auditoría — Fase 0: Descubrimiento y Auditoría Acotada
+# Informe de Auditoría — Fase 0 y Correcciones Fase 1
 **Proyecto:** VetBiobío — Directorio Geográfico de Clínicas Veterinarias de la Región del Biobío  
 **Fecha:** Octubre 2026  
 **Auditor:** Antigravity (Pair Programming / Security & Architecture Audit)  
-**Modo:** Solo lectura (Inspección estática de código, esquemas de BD, infraestructura CI/Docker y configuraciones)  
-**Estado:** Finalizado — Pendiente de revisión y aprobación para Fase 1  
+**Modo:** Auditoría inicial (Fase 0) → Saneamiento P0/P1 aplicado y verificado (Fase 1)  
+**Estado:** Fase 1 Finalizada — 8/8 Hallazgos Corregidos y Verificados con pruebas de regresión  
 
 ---
 
@@ -96,16 +96,16 @@ flowchart TD
 
 ## 2. Matriz de Hallazgos Críticos y Altos
 
-| ID | Severidad | Prioridad | Confianza | Categoría | Ubicación | Resumen del Problema |
-|---|---|---|---|---|---|---|
-| **DB-001** | Crítico | **P0** | Alta | SQL / Integridad | `verification.service.ts:33-46` | Clave primaria errónea (`id` vs `clinic_id`) en verificación de ubicaciones causa 500 fatal. |
-| **DB-002** | Crítico | **P0** | Alta | SQL / Esquema | `verification.service.ts:43-46` | Columnas inexistentes en `clinic_photo`, `schedule` y precios en query de verificación. |
-| **DB-003** | Alto | **P1** | Alta | Concurrencia | `submissions.service.ts:238-402` | Condición de carrera (TOCTOU) en aprobación de aportes permite aprobaciones duplicadas. |
-| **DB-004** | Alto | **P1** | Alta | Transacciones / Reglas | `submissions.service.ts:334-385` | Aprobación de precios sin transacción atómica ni validación de reglas CHECK de BD. |
-| **API-001** | Alto | **P1** | Alta | Validación / Crash | `search-clinics.dto.ts:10` / `clinics.geo.repository.ts:32` | Casting directo de enum sin validar en query pública provoca crash SQL 500. |
-| **SEC-001** | Alto | **P1** | Media | Rate Limiting / DoS | `submissions.controller.ts:9` / `create-submission.dto.ts:26` | `POST /submissions` público sin rate limiting estricto ni validación de payload JSON. |
-| **OPS-001** | Alto | **P1** | Alta | Docker / Infra | `docker-compose.yml:15,23` / `api.Dockerfile:6` / `web.Dockerfile:6` | Fallo de build en `docker compose`, lockfile ausente en imágenes y contenedores como `root`. |
-| **OPS-002** | Alto | **P1** | Alta | CI / Integridad | `.github/workflows/ci.yml:42-60` | Migración `0009_submissions` omitida en CI y dependencia de geocodificación externa en vivo. |
+| ID | Severidad | Prioridad | Confianza | Categoría | Ubicación | Resumen del Problema | Estado Fase 1 |
+|---|---|---|---|---|---|---|---|
+| **DB-001** | Crítico | **P0** | Alta | SQL / Integridad | `verification.service.ts:33-46` | Clave primaria errónea (`id` vs `clinic_id`) en verificación de ubicaciones causa 500 fatal. | **Corregido y Verificado** (`verification.service.spec.ts`) |
+| **DB-002** | Crítico | **P0** | Alta | SQL / Esquema | `verification.service.ts:43-46` | Columnas inexistentes en `clinic_photo`, `schedule` y precios en query de verificación. | **Corregido y Verificado** (`verification.service.spec.ts`) |
+| **DB-003** | Alto | **P1** | Alta | Concurrencia | `submissions.service.ts:238-402` | Condición de carrera (TOCTOU) en aprobación de aportes permite aprobaciones duplicadas. | **Corregido y Verificado** (`submissions.service.spec.ts`) |
+| **DB-004** | Alto | **P1** | Alta | Transacciones / Reglas | `submissions.service.ts:334-385` | Aprobación de precios sin transacción atómica ni validación de reglas CHECK de BD. | **Corregido y Verificado** (`submissions.service.spec.ts`) |
+| **API-001** | Alto | **P1** | Alta | Validación / Crash | `search-clinics.dto.ts:10` / `clinics.geo.repository.ts:32` | Casting directo de enum sin validar en query pública provoca crash SQL 500. | **Corregido y Verificado** (`search-clinics.dto.spec.ts`) |
+| **SEC-001** | Alto | **P1** | Media | Rate Limiting / DoS | `submissions.controller.ts:9` / `create-submission.dto.ts:26` | `POST /submissions` público sin rate limiting estricto ni validación de payload JSON. | **Corregido y Verificado** (`submissions.service.spec.ts`) |
+| **OPS-001** | Alto | **P1** | Alta | Docker / Infra | `docker-compose.yml:15,23` / `api.Dockerfile:6` / `web.Dockerfile:6` | Fallo de build en `docker compose`, lockfile ausente en imágenes y contenedores como `root`. | **Corregido y Verificado** (`docker compose config`) |
+| **OPS-002** | Alto | **P1** | Alta | CI / Integridad | `.github/workflows/ci.yml:42-60` | Migración `0009_submissions` omitida en CI y dependencia de geocodificación externa en vivo. | **Corregido y Verificado** (`.github/workflows/ci.yml`) |
 
 ---
 
