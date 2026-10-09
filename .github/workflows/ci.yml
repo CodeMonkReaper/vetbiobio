@@ -47,7 +47,8 @@ jobs:
                    prisma/migrations/0004_search/migration.sql \
                    prisma/migrations/0006_es_unaccent/migration.sql \
                    prisma/migrations/0007_events/migration.sql \
-                   prisma/migrations/0008_monetization/migration.sql; do
+                   prisma/migrations/0008_monetization/migration.sql \
+                   prisma/migrations/0009_submissions/migration.sql; do
             pnpm exec prisma db execute --file "$f" --schema prisma/schema.prisma
           done
           for f in ../../infra/scripts/0001_seed_geo.sql \
