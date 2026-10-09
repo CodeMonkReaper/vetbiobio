@@ -19,16 +19,32 @@ export class SubmissionsService {
     private readonly audit: AuditService,
   ) {}
 
-  async create(createSubmissionDto: CreateSubmissionDto) {
+  async create(createSubmissionDto: CreateSubmissionDto, clientIp?: string) {
+    if (createSubmissionDto._hp) {
+      throw new BadRequestException('Spam detectado');
+    }
+
     const { type, clinicId, payload, message, evidenceUrl, submitterName, submitterEmail, hasConsent } = createSubmissionDto;
+
+    // Validación de integridad y límites del payload
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new BadRequestException('El campo payload debe ser un objeto JSON');
+    }
+    const payloadStr = JSON.stringify(payload);
+    if (payloadStr.length > 65536) {
+      throw new BadRequestException('El payload excede el límite máximo permitido de 64KB');
+    }
 
     // Generate tracking code like VBB-XXXX
     const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase();
     const trackingCode = `VBB-${randomHex}`;
 
+    const salt = process.env.SESSION_SECRET || 'vetbiobio-default-salt-32chars';
     let submitterHash: string | null = null;
     if (submitterEmail) {
-      submitterHash = crypto.createHash('sha256').update(submitterEmail.trim().toLowerCase()).digest('hex');
+      submitterHash = crypto.createHash('sha256').update(`${submitterEmail.trim().toLowerCase()}:${salt}`).digest('hex');
+    } else if (clientIp) {
+      submitterHash = crypto.createHash('sha256').update(`${clientIp}:${salt}`).digest('hex');
     }
 
     const consentAt = hasConsent ? new Date() : null;

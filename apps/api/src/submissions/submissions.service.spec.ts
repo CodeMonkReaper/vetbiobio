@@ -167,4 +167,55 @@ describe('SubmissionsService (DB-003 & DB-004 regression tests)', () => {
       expect(res.status).toBe('APPROVED');
     });
   });
+
+  describe('SEC-001: Protección anti-abuso, honeypot y hashing seguro', () => {
+    it('bloquea envíos automatizados si el campo honeypot _hp viene relleno', async () => {
+      await expect(
+        service.create({
+          type: 'NEW_CLINIC',
+          payload: { name: 'Clinica Spam' },
+          _hp: 'soy_un_bot_de_spam',
+        }),
+      ).rejects.toThrow('Spam detectado');
+
+      expect(mockPrisma.submission.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza envíos con payload que no sea un objeto o supere 64KB', async () => {
+      const hugeObject: Record<string, string> = {};
+      for (let i = 0; i < 3000; i++) {
+        hugeObject[`clave_${i}`] = 'x'.repeat(30);
+      }
+
+      await expect(
+        service.create({
+          type: 'NEW_CLINIC',
+          payload: hugeObject,
+        }),
+      ).rejects.toThrow('El payload excede el límite máximo permitido de 64KB');
+    });
+
+    it('genera submitterHash con sal para solicitudes anónimas utilizando la IP del cliente', async () => {
+      mockPrisma.submission.create.mockImplementationOnce(({ data }: any) => {
+        return Promise.resolve({
+          ...data,
+          id: 301n,
+          trackingCode: data.trackingCode,
+        });
+      });
+
+      const res = await service.create(
+        {
+          type: 'OTHER',
+          payload: { mensaje: 'Dato anónimo' },
+        },
+        '192.168.1.100',
+      );
+
+      expect(res.trackingCode).toBeDefined();
+      const createCall = mockPrisma.submission.create.mock.calls[0][0];
+      expect(createCall.data.submitterHash).toBeDefined();
+      expect(createCall.data.submitterHash.length).toBe(64); // SHA-256 hex
+    });
+  });
 });

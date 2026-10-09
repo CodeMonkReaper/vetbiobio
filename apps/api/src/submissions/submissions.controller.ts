@@ -1,4 +1,6 @@
-import { Controller, Post, Body, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, NotFoundException, Req } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { Request } from 'express';
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 
@@ -6,9 +8,11 @@ import { CreateSubmissionDto } from './dto/create-submission.dto';
 export class SubmissionsController {
   constructor(private readonly submissionsService: SubmissionsService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   @Post()
-  async create(@Body() createSubmissionDto: CreateSubmissionDto) {
-    return this.submissionsService.create(createSubmissionDto);
+  async create(@Body() createSubmissionDto: CreateSubmissionDto, @Req() req: Request) {
+    const clientIp = req.ip || req.socket.remoteAddress;
+    return this.submissionsService.create(createSubmissionDto, clientIp);
   }
 
   @Get('track/:code')
