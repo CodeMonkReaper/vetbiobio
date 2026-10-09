@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+const API = process.env.INTERNAL_API_URL ?? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1');
 
 export const revalidate = 86400; // 1 día
 

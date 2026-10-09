@@ -1,4 +1,7 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+const isServer = typeof window === 'undefined';
+export const API_BASE = isServer && process.env.INTERNAL_API_URL
+  ? process.env.INTERNAL_API_URL
+  : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1');
 
 export async function fetchClinics(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString();
