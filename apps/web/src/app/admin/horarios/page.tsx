@@ -154,19 +154,18 @@ function HorariosInner() {
     }
   }
 
-  // Copia el horario de lunes a viernes
-  async function applyMondayToFriday() {
+  // Replicar horario de lunes a otros días específicos
+  async function replicateSchedule(targetDays: number[], label: string) {
     const monday = scheduleMap.get(1);
     if (!monday) {
-      setError('Debes configurar primero el horario del Lunes.');
+      setError('Debes configurar primero el horario del Lunes para usarlo como plantilla.');
       return;
     }
     setSaving(true);
     setError('');
     setSuccess('');
     try {
-      const weekdays = [2, 3, 4, 5]; // Martes a Viernes
-      for (const day of weekdays) {
+      for (const day of targetDays) {
         await adminApi(`/admin/clinics/${slug}/schedules`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -178,7 +177,34 @@ function HorariosInner() {
           }),
         });
       }
-      setSuccess('Horario de Lunes replicado a Martes, Miércoles, Jueves y Viernes.');
+      setSuccess(`Horario de Lunes replicado exitosamente (${label}).`);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Configurar urgencia continua 24/7 (todos los 7 días)
+  async function setEmergency247() {
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      for (let day = 0; day <= 6; day++) {
+        await adminApi(`/admin/clinics/${slug}/schedules`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dayOfWeek: day,
+            openingTime: '00:00:00',
+            closingTime: '23:59:59',
+            isClosed: false,
+          }),
+        });
+      }
+      setSuccess('Clínica configurada como Servicio de Urgencia 24/7 (atención ininterrumpida los 7 días).');
       await load();
     } catch (err) {
       setError((err as Error).message);
@@ -232,23 +258,68 @@ function HorariosInner() {
           </div>
         )}
 
-        {/* Acciones de atajo */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div>
-            <div className="text-sm font-bold text-slate-800">Acción Rápida de Jornada</div>
-            <div className="text-xs text-slate-500">
-              Replica el horario configurado del día Lunes a los días hábiles (Martes a Viernes).
+        {/* Acciones de atajo y replicación */}
+        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>Plantillas y Replicación Rápida de Horario</span>
+              </div>
+              <div className="text-xs text-slate-500">
+                Usa el horario del Lunes como base para configurar rápidamente los turnos semanales.
+              </div>
             </div>
+            <span className="text-[11px] text-slate-400">
+              {scheduleMap.has(1) ? '✓ Lunes configurado como plantilla' : '⚠️ Configura el Lunes primero'}
+            </span>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void applyMondayToFriday()}
-            disabled={saving || loading || !scheduleMap.has(1)}
-          >
-            ⚡ Replicar Lunes a Días Hábiles
-          </Button>
+
+          <div className="flex items-center flex-wrap gap-2 pt-1 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void replicateSchedule([2, 3, 4, 5], 'Lunes a Viernes')}
+              disabled={saving || loading || !scheduleMap.has(1)}
+              className="text-xs"
+            >
+              📅 Replicar a Lunes - Viernes
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void replicateSchedule([2, 3, 4, 5, 6], 'Lunes a Sábado')}
+              disabled={saving || loading || !scheduleMap.has(1)}
+              className="text-xs"
+            >
+              🗓️ Replicar a Lunes - Sábado
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void replicateSchedule([0, 2, 3, 4, 5, 6], 'Toda la Semana')}
+              disabled={saving || loading || !scheduleMap.has(1)}
+              className="text-xs"
+            >
+              🔄 Replicar los 7 Días
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void setEmergency247()}
+              disabled={saving || loading}
+              className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            >
+              🚨 Establecer Urgencia 24/7
+            </Button>
+          </div>
         </div>
 
         {/* Cuadrícula de 7 días */}
