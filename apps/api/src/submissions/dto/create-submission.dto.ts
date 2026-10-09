@@ -44,4 +44,8 @@ export class CreateSubmissionDto {
   @ValidateIf(o => o.submitterEmail != null)
   @IsBoolean()
   hasConsent?: boolean;
+
+  @IsOptional()
+  @IsString()
+  _hp?: string;
 }

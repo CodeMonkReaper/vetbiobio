@@ -9,6 +9,7 @@ import {
   UpdateSubmissionDto,
 } from './dto/admin-submissions.dto';
 import { slugify, uniqueSlug } from '../common/slug';
+import { validatePriceAmounts, previousValidUntil, PricingType } from '../prices/price-rules';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -18,16 +19,32 @@ export class SubmissionsService {
     private readonly audit: AuditService,
   ) {}
 
-  async create(createSubmissionDto: CreateSubmissionDto) {
+  async create(createSubmissionDto: CreateSubmissionDto, clientIp?: string) {
+    if (createSubmissionDto._hp) {
+      throw new BadRequestException('Spam detectado');
+    }
+
     const { type, clinicId, payload, message, evidenceUrl, submitterName, submitterEmail, hasConsent } = createSubmissionDto;
+
+    // Validación de integridad y límites del payload
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new BadRequestException('El campo payload debe ser un objeto JSON');
+    }
+    const payloadStr = JSON.stringify(payload);
+    if (payloadStr.length > 65536) {
+      throw new BadRequestException('El payload excede el límite máximo permitido de 64KB');
+    }
 
     // Generate tracking code like VBB-XXXX
     const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase();
     const trackingCode = `VBB-${randomHex}`;
 
+    const salt = process.env.SESSION_SECRET || 'vetbiobio-default-salt-32chars';
     let submitterHash: string | null = null;
     if (submitterEmail) {
-      submitterHash = crypto.createHash('sha256').update(submitterEmail.trim().toLowerCase()).digest('hex');
+      submitterHash = crypto.createHash('sha256').update(`${submitterEmail.trim().toLowerCase()}:${salt}`).digest('hex');
+    } else if (clientIp) {
+      submitterHash = crypto.createHash('sha256').update(`${clientIp}:${salt}`).digest('hex');
     }
 
     const consentAt = hasConsent ? new Date() : null;
@@ -236,37 +253,40 @@ export class SubmissionsService {
   }
 
   async adminApprove(id: bigint | number, dto: ApproveSubmissionDto, userId?: number | null) {
-    const sub = await this.prisma.submission.findUnique({
-      where: { id: BigInt(id) },
-      include: { clinic: true },
-    });
+    // DB-003 & DB-004: Transacción ACID con bloqueo exclusivo FOR UPDATE
+    return await this.prisma.$transaction(async (tx: any) => {
+      const rows: any[] = await tx.$queryRaw`
+        SELECT id, tracking_code, type, clinic_id, payload, message, status
+        FROM submission
+        WHERE id = ${BigInt(id)}
+        FOR UPDATE
+      `;
 
-    if (!sub) throw new NotFoundException('Submission no encontrada');
-    if (sub.status !== 'PENDING') throw new BadRequestException('El aporte ya fue procesado');
+      if (!rows || rows.length === 0) throw new NotFoundException('Submission no encontrada');
+      const sub = rows[0];
+      if (sub.status !== 'PENDING') throw new BadRequestException('El aporte ya fue procesado');
 
-    const payload = (sub.payload as Record<string, any>) || {};
-    let appliedEntityType: string | null = null;
-    let appliedEntityId: bigint | null = null;
+      const payload = (sub.payload as Record<string, any>) || {};
+      let appliedEntityType: string | null = null;
+      let appliedEntityId: bigint | null = null;
 
-    // Apply change according to submission type
-    if (sub.type === 'NEW_CLINIC') {
-      const clinicName = payload.name || payload.nombre || 'Nueva Clínica Veterinaria';
-      const slug = await uniqueSlug(clinicName, async (s) => {
-        const found = await this.prisma.clinic.findUnique({ where: { slug: s } });
-        return !!found;
-      });
+      // Apply change according to submission type
+      if (sub.type === 'NEW_CLINIC') {
+        const clinicName = payload.name || payload.nombre || 'Nueva Clínica Veterinaria';
+        const slug = await uniqueSlug(clinicName, async (s) => {
+          const found = await tx.clinic.findUnique({ where: { slug: s } });
+          return !!found;
+        });
 
-      const communeCut = payload.communeCut || payload.cut || '08101'; // Default Concepción
-      const commune = await this.prisma.commune.findFirst({
-        where: { cut: String(communeCut) },
-        select: { id: true },
-      });
+        const communeCut = payload.communeCut || payload.cut || '08101'; // Default Concepción
+        const commune = await tx.commune.findFirst({
+          where: { cut: String(communeCut) },
+          select: { id: true },
+        });
 
-      const clinicStatus = dto.publishDirectly ? 'ACTIVE' : 'DRAFT';
+        const clinicStatus = dto.publishDirectly ? 'ACTIVE' : 'DRAFT';
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const createdClinic: any = await this.prisma.$transaction(async (tx: any) => {
-        const newClinic = await tx.clinic.create({
+        const createdClinic = await tx.clinic.create({
           data: {
             name: clinicName,
             slug,
@@ -288,7 +308,7 @@ export class SubmissionsService {
           await tx.$executeRaw`
             INSERT INTO clinic_location (clinic_id, address, commune_id, latitude, longitude, location)
             VALUES (
-              ${newClinic.id},
+              ${createdClinic.id},
               ${String(payload.address)},
               ${commune.id},
               ${lat},
@@ -300,161 +320,189 @@ export class SubmissionsService {
           `;
         }
 
-        return newClinic;
-      });
+        appliedEntityType = 'clinic';
+        appliedEntityId = createdClinic.id;
+      } else if ((sub.type === 'UPDATE_CLINIC' || sub.type === 'CLINIC_UPDATE') && sub.clinic_id) {
+        const clinicId = BigInt(sub.clinic_id);
+        const updateClinicData: any = {};
+        if (payload.phone || payload.telefono) updateClinicData.phoneE164 = payload.phone || payload.telefono;
+        if (payload.email) updateClinicData.email = payload.email;
+        if (payload.whatsapp) updateClinicData.whatsappE164 = payload.whatsapp;
+        if (payload.website || payload.web) updateClinicData.website = payload.website || payload.web;
+        if (payload.description || payload.descripcion) updateClinicData.description = payload.description || payload.descripcion;
+        if (payload.isEmergency !== undefined) updateClinicData.isEmergency = Boolean(payload.isEmergency);
+        if (payload.is24h !== undefined) updateClinicData.is24h = Boolean(payload.is24h);
 
-      appliedEntityType = 'clinic';
-      appliedEntityId = createdClinic.id;
-    } else if (sub.type === 'UPDATE_CLINIC' && sub.clinicId) {
-      const updateClinicData: any = {};
-      if (payload.phone || payload.telefono) updateClinicData.phoneE164 = payload.phone || payload.telefono;
-      if (payload.email) updateClinicData.email = payload.email;
-      if (payload.whatsapp) updateClinicData.whatsappE164 = payload.whatsapp;
-      if (payload.website || payload.web) updateClinicData.website = payload.website || payload.web;
-      if (payload.description || payload.descripcion) updateClinicData.description = payload.description || payload.descripcion;
-      if (payload.isEmergency !== undefined) updateClinicData.isEmergency = Boolean(payload.isEmergency);
-      if (payload.is24h !== undefined) updateClinicData.is24h = Boolean(payload.is24h);
+        if (Object.keys(updateClinicData).length > 0) {
+          await tx.clinic.update({
+            where: { id: clinicId },
+            data: updateClinicData,
+          });
+        }
 
-      if (Object.keys(updateClinicData).length > 0) {
-        await this.prisma.clinic.update({
-          where: { id: sub.clinicId },
-          data: updateClinicData,
+        appliedEntityType = 'clinic';
+        appliedEntityId = clinicId;
+      } else if (sub.type === 'REPORT_CLOSURE' && sub.clinic_id) {
+        const clinicId = BigInt(sub.clinic_id);
+        await tx.clinic.update({
+          where: { id: clinicId },
+          data: { status: 'CLOSED' },
         });
-      }
+        appliedEntityType = 'clinic';
+        appliedEntityId = clinicId;
+      } else if ((sub.type === 'UPDATE_PRICE' || sub.type === 'PRICE') && sub.clinic_id) {
+        // DB-004: Transacción atómica y validación de reglas de montos de precios
+        const clinicId = BigInt(sub.clinic_id);
+        const serviceSlug = payload.serviceSlug || payload.service;
+        if (!serviceSlug) {
+          throw new BadRequestException('Se requiere serviceSlug para actualizar el precio');
+        }
 
-      appliedEntityType = 'clinic';
-      appliedEntityId = sub.clinicId;
-    } else if (sub.type === 'REPORT_CLOSURE' && sub.clinicId) {
-      await this.prisma.clinic.update({
-        where: { id: sub.clinicId },
-        data: { status: 'CLOSED' },
-      });
-      appliedEntityType = 'clinic';
-      appliedEntityId = sub.clinicId;
-    } else if (sub.type === 'UPDATE_PRICE' && sub.clinicId) {
-      // Create price append-only with source: COMMUNITY
-      const serviceSlug = payload.serviceSlug || payload.service;
-      if (serviceSlug) {
-        const service = await this.prisma.service.findUnique({ where: { slug: serviceSlug } });
-        if (service) {
-          const clinicService = await this.prisma.clinicService.upsert({
-            where: {
-              clinicId_serviceId: {
-                clinicId: sub.clinicId,
-                serviceId: service.id,
-              },
-            },
-            create: {
-              clinicId: sub.clinicId,
+        const service = await tx.service.findUnique({ where: { slug: serviceSlug } });
+        if (!service) {
+          throw new BadRequestException(`Servicio no encontrado: ${serviceSlug}`);
+        }
+
+        const pricingType: PricingType = (payload.pricingType as PricingType) || 'FIXED';
+        let minAmount = payload.minAmount != null ? Number(payload.minAmount) : (payload.amount != null ? Number(payload.amount) : null);
+        let maxAmount = payload.maxAmount != null ? Number(payload.maxAmount) : null;
+
+        if (pricingType === 'FIXED' && minAmount !== null && maxAmount === null) {
+          maxAmount = minAmount;
+        }
+
+        try {
+          validatePriceAmounts(pricingType, minAmount, maxAmount);
+        } catch (err: any) {
+          throw new BadRequestException(`Regla de precio inválida: ${err.message}`);
+        }
+
+        const clinicService = await tx.clinicService.upsert({
+          where: {
+            clinicId_serviceId: {
+              clinicId,
               serviceId: service.id,
             },
-            update: {},
-          });
+          },
+          create: {
+            clinicId,
+            serviceId: service.id,
+          },
+          update: {},
+        });
 
-          // Close existing active price
-          const today = new Date();
-          const yesterday = new Date(today);
-          yesterday.setDate(yesterday.getDate() - 1);
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const closeAtStr = previousValidUntil(todayStr);
 
-          await this.prisma.clinicServicePrice.updateMany({
-            where: {
-              clinicServiceId: clinicService.id,
-              validUntil: null,
-            },
-            data: {
-              validUntil: yesterday,
-            },
-          });
+        // Cierra el precio anterior en la misma transacción tx
+        await tx.clinicServicePrice.updateMany({
+          where: {
+            clinicServiceId: clinicService.id,
+            validUntil: null,
+          },
+          data: {
+            validUntil: new Date(`${closeAtStr}T00:00:00Z`),
+          },
+        });
 
-          const newPrice = await this.prisma.clinicServicePrice.create({
-            data: {
-              clinicServiceId: clinicService.id,
-              pricingType: payload.pricingType || 'FIXED',
-              minAmount: payload.minAmount ? Number(payload.minAmount) : null,
-              maxAmount: payload.maxAmount ? Number(payload.maxAmount) : null,
-              source: 'COMMUNITY',
-              verificationStatus: 'UNVERIFIED',
-              notes: payload.notes || 'Aporte ciudadano aprobado',
-              validFrom: today,
-            },
-          });
+        // Inserta el nuevo precio en la misma transacción tx
+        const newPrice = await tx.clinicServicePrice.create({
+          data: {
+            clinicServiceId: clinicService.id,
+            pricingType,
+            minAmount,
+            maxAmount,
+            source: 'COMMUNITY',
+            verificationStatus: 'UNVERIFIED',
+            notes: payload.notes || 'Aporte ciudadano aprobado',
+            validFrom: new Date(`${todayStr}T00:00:00Z`),
+          },
+        });
 
-          appliedEntityType = 'clinic_service_price';
-          appliedEntityId = newPrice.id;
-        }
+        appliedEntityType = 'clinic_service_price';
+        appliedEntityId = newPrice.id;
+      } else {
+        // OTHER or unstructured types: Approved with notes
+        appliedEntityType = sub.clinic_id ? 'clinic' : 'submission';
+        appliedEntityId = sub.clinic_id ? BigInt(sub.clinic_id) : BigInt(sub.id);
       }
-    } else {
-      // OTHER or unstructured types: Approved with notes
-      appliedEntityType = sub.clinicId ? 'clinic' : 'submission';
-      appliedEntityId = sub.clinicId ?? sub.id;
-    }
 
-    const reviewed = await this.prisma.submission.update({
-      where: { id: BigInt(id) },
-      data: {
-        status: 'APPROVED',
-        reviewedBy: userId ? BigInt(userId) : null,
-        reviewedAt: new Date(),
-        reviewNotes: dto.reviewNotes ?? null,
-        appliedEntityType,
-        appliedEntityId,
-      },
+      const reviewed = await tx.submission.update({
+        where: { id: BigInt(id) },
+        data: {
+          status: 'APPROVED',
+          reviewedBy: userId ? BigInt(userId) : null,
+          reviewedAt: new Date(),
+          reviewNotes: dto.reviewNotes ?? null,
+          appliedEntityType,
+          appliedEntityId,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: userId ? BigInt(userId) : null,
+          action: 'UPDATE',
+          entityType: 'submission',
+          entityId: BigInt(id),
+          oldValues: { status: 'PENDING' },
+          newValues: {
+            status: 'APPROVED',
+            appliedEntityType,
+            appliedEntityId: appliedEntityId ? Number(appliedEntityId) : null,
+            reviewNotes: dto.reviewNotes,
+          },
+        },
+      });
+
+      return {
+        ...reviewed,
+        id: reviewed.id.toString(),
+        clinicId: reviewed.clinicId?.toString() ?? null,
+        reviewedBy: reviewed.reviewedBy?.toString() ?? null,
+        appliedEntityId: reviewed.appliedEntityId?.toString() ?? null,
+      };
     });
-
-    await this.audit.record({
-      userId: userId ?? null,
-      action: 'UPDATE',
-      entityType: 'submission',
-      entityId: Number(id),
-      oldValues: { status: 'PENDING' },
-      newValues: {
-        status: 'APPROVED',
-        appliedEntityType,
-        appliedEntityId: appliedEntityId ? Number(appliedEntityId) : null,
-        reviewNotes: dto.reviewNotes,
-      },
-    });
-
-    return {
-      ...reviewed,
-      id: reviewed.id.toString(),
-      clinicId: reviewed.clinicId?.toString() ?? null,
-      reviewedBy: reviewed.reviewedBy?.toString() ?? null,
-      appliedEntityId: reviewed.appliedEntityId?.toString() ?? null,
-    };
   }
 
   async adminReject(id: bigint | number, dto: RejectSubmissionDto, userId?: number | null) {
-    const sub = await this.prisma.submission.findUnique({ where: { id: BigInt(id) } });
-    if (!sub) throw new NotFoundException('Submission no encontrada');
-    if (sub.status !== 'PENDING') throw new BadRequestException('El aporte ya fue procesado');
+    return await this.prisma.$transaction(async (tx: any) => {
+      const rows: any[] = await tx.$queryRaw`
+        SELECT id, status FROM submission WHERE id = ${BigInt(id)} FOR UPDATE
+      `;
+      if (!rows || rows.length === 0) throw new NotFoundException('Submission no encontrada');
+      const sub = rows[0];
+      if (sub.status !== 'PENDING') throw new BadRequestException('El aporte ya fue procesado');
 
-    const reviewed = await this.prisma.submission.update({
-      where: { id: BigInt(id) },
-      data: {
-        status: 'REJECTED',
-        reviewedBy: userId ? BigInt(userId) : null,
-        reviewedAt: new Date(),
-        reviewNotes: dto.reviewNotes ?? null,
-      },
+      const reviewed = await tx.submission.update({
+        where: { id: BigInt(id) },
+        data: {
+          status: 'REJECTED',
+          reviewedBy: userId ? BigInt(userId) : null,
+          reviewedAt: new Date(),
+          reviewNotes: dto.reviewNotes ?? null,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: userId ? BigInt(userId) : null,
+          action: 'UPDATE',
+          entityType: 'submission',
+          entityId: BigInt(id),
+          oldValues: { status: 'PENDING' },
+          newValues: { status: 'REJECTED', reviewNotes: dto.reviewNotes },
+        },
+      });
+
+      return {
+        ...reviewed,
+        id: reviewed.id.toString(),
+        clinicId: reviewed.clinicId?.toString() ?? null,
+        reviewedBy: reviewed.reviewedBy?.toString() ?? null,
+        appliedEntityId: reviewed.appliedEntityId?.toString() ?? null,
+      };
     });
-
-    await this.audit.record({
-      userId: userId ?? null,
-      action: 'UPDATE',
-      entityType: 'submission',
-      entityId: Number(id),
-      oldValues: { status: 'PENDING' },
-      newValues: { status: 'REJECTED', reviewNotes: dto.reviewNotes },
-    });
-
-    return {
-      ...reviewed,
-      id: reviewed.id.toString(),
-      clinicId: reviewed.clinicId?.toString() ?? null,
-      reviewedBy: reviewed.reviewedBy?.toString() ?? null,
-      appliedEntityId: reviewed.appliedEntityId?.toString() ?? null,
-    };
   }
 
   async adminOverview() {

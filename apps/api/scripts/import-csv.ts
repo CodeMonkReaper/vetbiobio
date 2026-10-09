@@ -18,6 +18,10 @@ function slugify(s: string): string {
 }
 
 async function geocode(q: string): Promise<{ lat: number; lng: number } | null> {
+  // En CI o tests automatizados, usar coordenadas base de Concepción para evitar fallos por rate-limit de OSM Nominatim
+  if (process.env.CI || process.env.MOCK_GEO === 'true') {
+    return { lat: -36.827, lng: -73.05 };
+  }
   const attempt = async (query: string) => {
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
     const res = await fetch(url, { headers: { 'User-Agent': 'VetBioBio-piloto/0.1 (contacto: admin local)' } });

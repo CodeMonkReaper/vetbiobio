@@ -17,12 +17,13 @@ import { PremiumModule } from './premium/premium.module';
 import { MediaModule } from './media/media.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { SubmissionsModule } from './submissions/submissions.module';
+import { DataQualityModule } from './data-quality/data-quality.module';
 
 @Module({
   imports: [
     PrismaModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
-    HealthModule, ClinicsModule, SearchModule, UsersModule, AuthModule, AuditModule, VerificationModule, PricesModule, ReportsModule, EventsModule, CommunesModule, PremiumModule, MediaModule, CatalogModule, SubmissionsModule,
+    HealthModule, ClinicsModule, SearchModule, UsersModule, AuthModule, AuditModule, VerificationModule, PricesModule, ReportsModule, EventsModule, CommunesModule, PremiumModule, MediaModule, CatalogModule, SubmissionsModule, DataQualityModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

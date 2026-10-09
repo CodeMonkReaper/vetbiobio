@@ -2,12 +2,12 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-06 (UTC) — Playwright verifica el mapa: funciona (era render lento del headless).
+> Última actualización: 2026-10-08 (UTC) — Aportes ciudadanos moderados + Panel Admin completo + Fix migración 0004 y levanta local.
 
 ## 1. Estado actual
 
-* Etapa: MVP técnico completo (Fases 1–6 + SEO/analytics/E2E). Pendiente: validación piloto con clínicas reales.
-* Cobertura MVP (§81 project_context): público ✓ (home/buscador/listado/filtros/mapa-embed/perfil/precios/profesionales/comparación/verificación) · admin ✓ (login/dashboard-UI-mínima/CRUD/verificaciones/reportes/premium-ads) · fuera-MVP respetado (sin reservas/pagos/reseñas/app nativa).
+* Etapa: MVP técnico completo + Ciclo de moderación ciudadana (Aportes comunitarios Ley 19.628). Pendiente: validación piloto con clínicas reales.
+* Cobertura MVP (§81 project_context): público ✓ (home/buscador/listado/filtros/mapa-embed/perfil/precios/profesionales/comparación/verificación/aportar/consultar-estado) · admin ✓ (login/dashboard-kpis/inbox-aportes/moderación-transaccional/gestión-clínicas-estados/verificaciones/reportes/precios/horarios/fotos/auditoría-actor) · fuera-MVP respetado (sin reservas/pagos/reseñas/app nativa).
 * Stack congelado: Next.js 14 + NestJS 10 + PostgreSQL 16/PostGIS 3.4 + Prisma 5 + pnpm 9 + Docker.
 * Decisiones aplicadas:
   1. Verificación por campo (cada registro lleva status/verified_at/source), sin badge global único.
@@ -15,6 +15,7 @@
   3. Slug único global inmutable, comuna solo prefijo SEO + `slug_redirect`.
   4. Precios append-only (`valid_from/valid_until`) + vistas `v_current_*`, `INTEGER CLP`.
   5. Geo: `latitude/longitude` + `location GEOGRAPHY` vía trigger, queries en `*.geo.repository.ts` con `$queryRaw`.
+  6. Aportes ciudadanos moderados (ADR-006): código de seguimiento `VBB-XXXX` sin PII pública, consentimiento explícito Ley 19.628 para correo, aplicación transaccional con fuente `COMMUNITY` y estado `UNVERIFIED`, auditoría de actor real (`userId`).
 * Toolchain verificado: node v24.18.0, pnpm 9.0.0, docker 29.6.1.
 
 ## 2. Estructura creada
@@ -68,6 +69,7 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-06 | Mapa blank: build obsoleto | Servidor corría build anterior al token y al rediseño (CSS/JS existían pero el HTML servido era viejo); rebuild limpio (web detenida + `.next` borrado) + token `pk.*` verificado compilado en el chunk + OSM 200 + frame/mapjs en HTML; causa raíz: `NEXT_PUBLIC_*` se congela en build, hay que reconstruir tras agregar `.env.local` |
 | 2026-10-06 | Playwright: mapa OK | `@playwright/test` + Chromium + `playwright.config.ts` + `e2e/smoke.spec.ts` (home, listado, perfil con canvas/iframe + screenshots, sin errores de página) + script `test:e2e` web; evidencia: home y mapa perfectos (calles de Concepción, río, pin teal); el "blanco" era render lento de SwiftShader (12s de espera lo resuelve); red 24/24 a Mapbox 200, WebGL1 OK; `0009` ahora publica a ACTIVE (era paso manual); CI alineado a piloto (import CSV + 0009) + Playwright con servidores; `e2e/output/` gitignored |
 | 2026-10-06 | Fix estilos Tailwind | Causa: faltaba `postcss.config.js` (CSS salía crudo, 283B) + `.next` con locks de OneDrive dificultó el diagnóstico (config con ruta explícita `__dirname` + rebuild limpio con web detenida → CSS 14.5KB procesado, servido verificado); lección documentada en `docs/deployment.md` §6 |
+| 2026-10-08 | Aportes ciudadanos + Moderación Admin | Migración `0009_submissions` (tabla `submission`, enum `COMMUNITY`); fix `0004_search` (eliminadas referencias a tabla inexistente `clinic_professional`); backend NestJS: módulo `Submissions` público (`POST /submissions`, `GET /submissions/track/:code`), módulo admin (`AdminSubmissionsController` con `/admin/overview`, listado, detalle, actualización, aprobación transaccional por tipo y rechazo con notas), trazabilidad con actor real (`userId`) en `AuditService`, borrado de 10 carpetas vacías en `apps/api/src`; frontend Next.js: formulario `/aportar` (8 tipos, evidencia, consentimiento Ley 19.628, tracking code `VBB-XXXX`), `/aportar/estado` (consulta pública sin PII), fix parámetro `clinicSlug` en `/reportar`, nuevo layout `/admin/layout.tsx` con sidebar y badges dinámicos, `/admin` dashboard con KPIs, `/admin/aportes` bandeja con filtros, `/admin/aportes/[id]` ficha de moderación y aprobación, `/admin/clinics` con soporte para todos los estados (`ACTIVE`/`DRAFT`/`INACTIVE`/`CLOSED`), `/admin/reportes` modernizado, actualización de `/privacidad`, fix `useSearchParams` con `<Suspense>`; verificación E2E de ciclo completo: envío de aporte → código → login admin → overview → aprobación transaccional → auditoría con actor `userId: 1` → limpieza de test data; `nest build` y `next build` OK (26 páginas). |
 
 ## 4. Próximo paso inmediato
 

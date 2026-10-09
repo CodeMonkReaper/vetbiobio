@@ -10,17 +10,27 @@ services:
       - "${DB_HOST_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vetbiobio} -d ${POSTGRES_DB:-vetbiobio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
-    build: ./infra/docker/api.Dockerfile
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "3001:3001"
     env_file: .env
 
   web:
-    build: ./infra/docker/web.Dockerfile
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
     depends_on:
       - api
     ports:
