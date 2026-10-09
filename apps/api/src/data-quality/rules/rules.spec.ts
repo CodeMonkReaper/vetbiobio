@@ -109,8 +109,8 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].ruleCode).toBe('RULE_INVALID_PHONE');
-      expect(violations[0].severity).toBe('CRITICAL');
+      expect(violations[0]!.ruleCode).toBe('RULE_INVALID_PHONE');
+      expect(violations[0]!.severity).toBe('CRITICAL');
     });
   });
 
@@ -125,8 +125,8 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].ruleCode).toBe('RULE_DUPLICATE_PHONE');
-      expect(violations[0].causeDescription).toContain('Clínica San Pedro');
+      expect(violations[0]!.ruleCode).toBe('RULE_DUPLICATE_PHONE');
+      expect(violations[0]!.causeDescription).toContain('Clínica San Pedro');
     });
 
     it('no reporta colisión con su propio registro', () => {
@@ -155,7 +155,7 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].causeDescription).toContain('(0, 0)');
+      expect(violations[0]!.causeDescription).toContain('(0, 0)');
     });
 
     it('detecta coordenadas fuera de la Región del Biobío (ej. Santiago)', () => {
@@ -164,7 +164,7 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].causeDescription).toContain('fuera de los límites');
+      expect(violations[0]!.causeDescription).toContain('fuera de los límites');
     });
 
     it('detecta coordenadas en mar abierto', () => {
@@ -173,7 +173,7 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].causeDescription).toContain('zona marítima');
+      expect(violations[0]!.causeDescription).toContain('zona marítima');
     });
   });
 
@@ -198,7 +198,7 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].causeDescription).toContain('posterior o igual al cierre');
+      expect(violations[0]!.causeDescription).toContain('posterior o igual al cierre');
     });
 
     it('no alerta si el turno es overnight legítimo', () => {
@@ -244,7 +244,7 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].causeDescription).toContain('días de antigüedad');
+      expect(violations[0]!.causeDescription).toContain('días de antigüedad');
     });
   });
 
@@ -264,7 +264,7 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].ruleCode).toBe('RULE_OUTDATED_VERIFICATION');
+      expect(violations[0]!.ruleCode).toBe('RULE_OUTDATED_VERIFICATION');
     });
   });
 
@@ -278,9 +278,9 @@ describe('Motor de Calidad de Datos — Reglas Unitarias', () => {
       });
       const violations = rule.evaluate(ctx);
       expect(violations.length).toBe(1);
-      expect(violations[0].ruleCode).toBe('RULE_INCOMPLETE_FIELDS');
-      expect(violations[0].metadata?.missingFields).toContain('horarios de atención');
-      expect(violations[0].metadata?.missingFields).toContain('catálogo de servicios/exámenes');
+      expect(violations[0]!.ruleCode).toBe('RULE_INCOMPLETE_FIELDS');
+      expect(violations[0]!.metadata?.missingFields).toContain('horarios de atención');
+      expect(violations[0]!.metadata?.missingFields).toContain('catálogo de servicios/exámenes');
     });
   });
 });

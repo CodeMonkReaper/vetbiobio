@@ -56,6 +56,7 @@ export class RuleScheduleConflict implements QualityRule {
           for (let j = i + 1; j < activeRows.length; j++) {
             const a = activeRows[i];
             const b = activeRows[j];
+            if (!a || !b) continue;
             if (a.openingTime && a.closingTime && b.openingTime && b.closingTime && !a.isOvernight && !b.isOvernight) {
               const aOpen = typeof a.openingTime === 'string' ? a.openingTime : (a.openingTime as Date).toISOString().slice(11, 16);
               const aClose = typeof a.closingTime === 'string' ? a.closingTime : (a.closingTime as Date).toISOString().slice(11, 16);

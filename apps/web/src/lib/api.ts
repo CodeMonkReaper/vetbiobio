@@ -28,3 +28,10 @@ export async function fetchCompare(slugs: string[], lat?: string, lng?: string) 
   if (!res.ok) throw new Error('Error comparando clínicas');
   return res.json();
 }
+
+export async function fetchClinicReliability(slug: string) {
+  const res = await fetch(`${API_BASE}/clinics/${encodeURIComponent(slug)}/reliability`, { next: { revalidate: 60 } });
+  if (!res.ok) return null;
+  return res.json();
+}
+

@@ -2,9 +2,18 @@ import Link from 'next/link';
 import type { ClinicProfile } from '@/types/domain';
 import { Badge, VerificationBadge } from '@/components/ui/Badge';
 import { TrackView } from '@/features/tracking/Track';
+import { ClinicReliability, type ReliabilityData } from './ClinicReliability';
 
 // Hero del perfil (§18): identidad, verificación, comuna y acciones. Sin "Reservar hora".
-export function ClinicHero({ clinic, communeSlug }: { clinic: ClinicProfile; communeSlug: string }) {
+export function ClinicHero({
+  clinic,
+  communeSlug,
+  reliability,
+}: {
+  clinic: ClinicProfile;
+  communeSlug: string;
+  reliability?: ReliabilityData | null;
+}) {
   return (
     <section aria-labelledby="clinic-name" className="space-y-2">
       <TrackView slug={clinic.slug} />
@@ -13,7 +22,10 @@ export function ClinicHero({ clinic, communeSlug }: { clinic: ClinicProfile; com
         {clinic.is_premium && <Badge tone="success">★ Premium</Badge>}
       </div>
       <h1 id="clinic-name" className="text-3xl font-bold">{clinic.name}</h1>
-      <VerificationBadge status={clinic.verification_status} verifiedAt={clinic.verified_at} />
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <VerificationBadge status={clinic.verification_status} verifiedAt={clinic.verified_at} />
+        {reliability && <ClinicReliability data={reliability} clinicName={clinic.name} />}
+      </div>
       <p className="text-ink-soft">
         {clinic.commune}, Biobío
         {clinic.is_emergency && ' · Atiende urgencias'}
@@ -28,3 +40,4 @@ export function ClinicHero({ clinic, communeSlug }: { clinic: ClinicProfile; com
     </section>
   );
 }
+

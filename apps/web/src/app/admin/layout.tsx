@@ -68,6 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/horarios', label: 'Horarios', icon: '🕒' },
     { href: '/admin/fotos', label: 'Fotos', icon: '📸' },
     { href: '/admin/verificar', label: 'Verificaciones', icon: '🛡️' },
+    { href: '/admin/calidad', label: 'Calidad de Datos', icon: '🎯' },
   ];
 
   return (

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { fetchClinic } from '@/lib/api';
+import { fetchClinic, fetchClinicReliability } from '@/lib/api';
 import { Breadcrumbs } from '@/components/layout/chrome';
 import { ClinicHero } from '@/features/clinic-profile/ClinicHero';
 import { ClinicContact } from '@/features/clinic-profile/ClinicContact';
@@ -55,7 +55,10 @@ function jsonLd(c: ClinicProfile) {
 }
 
 export default async function ClinicProfile({ params }: Props) {
-  const profile = (await fetchClinic(params.slug).catch(() => null)) as { data: ClinicProfile } | null;
+  const [profile, reliability] = await Promise.all([
+    fetchClinic(params.slug).catch(() => null) as Promise<{ data: ClinicProfile } | null>,
+    fetchClinicReliability(params.slug).catch(() => null),
+  ]);
   if (!profile) notFound();
   const c = profile.data;
 
@@ -70,7 +73,7 @@ export default async function ClinicProfile({ params }: Props) {
           { label: c.name },
         ]}
       />
-      <ClinicHero clinic={c} communeSlug={params.commune} />
+      <ClinicHero clinic={c} communeSlug={params.commune} reliability={reliability} />
       <ClinicContact clinic={c} />
       <ClinicLocation clinic={c} />
       <ScheduleTable schedules={c.schedules} />
