@@ -16,8 +16,7 @@ describe('SearchClinicsDto (API-001 regression tests)', () => {
   it('rechaza especies inválidas con error de validación (evita crash SQL 500)', async () => {
     const dto = plainToInstance(SearchClinicsDto, { species: 'perros_invalidos' });
     const errors = await validate(dto);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].property).toBe('species');
+    expect(errors[0]?.property).toBe('species');
   });
 
   it('permite especie omitida o vacía', async () => {
