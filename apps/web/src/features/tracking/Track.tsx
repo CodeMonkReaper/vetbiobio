@@ -22,12 +22,18 @@ export function TrackView({ slug }: { slug: string }) {
 }
 
 // Enlace de contacto con tracking (tel/wa/web). No bloquea la navegación.
-export function ContactLink({ href, slug, type, children, external }: {
+export function ContactLink({ href, slug, type, children, external, className }: {
   href: string; slug: string; type: 'phone_click' | 'whatsapp_click' | 'website_click';
-  children: React.ReactNode; external?: boolean;
+  children: React.ReactNode; external?: boolean; className?: string;
 }) {
   return (
-    <a href={href} onClick={() => beacon(slug, type)} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
+    <a
+      href={href}
+      className={className}
+      onClick={() => beacon(slug, type)}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer' : undefined}
+    >
       {children}
     </a>
   );
