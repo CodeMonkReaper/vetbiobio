@@ -111,6 +111,8 @@ model Clinic {
   advertisements     Advertisement[]
   subscriptions      PremiumSubscription[]
   submissions        Submission[]
+  qualityIssues      DataQualityIssue[]
+  qualityScore       ClinicQualityScore?
 
   @@map("clinic")
 }
@@ -403,4 +405,84 @@ model Submission {
   clinic            Clinic?   @relation(fields: [clinicId], references: [id], onDelete: SetNull)
 
   @@map("submission")
+}
+
+// Motor de Calidad de Datos (Fase 2, migración 0010_data_quality)
+enum DataQualitySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@map("data_quality_severity")
+}
+
+enum DataQualityStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+
+  @@map("data_quality_status")
+}
+
+enum DataQualityTrigger {
+  MANUAL
+  SCHEDULED_CRON
+
+  @@map("data_quality_trigger")
+}
+
+model DataQualityRun {
+  id                  BigInt             @id @default(autoincrement()) @db.BigInt
+  triggerType         DataQualityTrigger @default(MANUAL) @map("trigger_type")
+  triggeredBy         BigInt?            @map("triggered_by") @db.BigInt
+  evaluatedClinics    Int                @default(0) @map("evaluated_clinics")
+  openIssuesCount     Int                @default(0) @map("open_issues_count")
+  resolvedIssuesCount Int                @default(0) @map("resolved_issues_count")
+  executionTimeMs     Int                @default(0) @map("execution_time_ms")
+  startedAt           DateTime           @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt          DateTime?          @map("finished_at") @db.Timestamptz
+  issues              DataQualityIssue[]
+
+  @@map("data_quality_run")
+}
+
+model DataQualityIssue {
+  id                BigInt              @id @default(autoincrement()) @db.BigInt
+  clinicId          BigInt              @map("clinic_id") @db.BigInt
+  runId             BigInt?             @map("run_id") @db.BigInt
+  ruleCode          String              @map("rule_code")
+  severity          DataQualitySeverity
+  status            DataQualityStatus   @default(OPEN)
+  causeDescription  String              @map("cause_description")
+  recommendedAction String              @map("recommended_action")
+  metadata          Json                @default("{}")
+  fingerprint       String
+  firstDetectedAt   DateTime            @default(now()) @map("first_detected_at") @db.Timestamptz
+  lastEvaluatedAt   DateTime            @default(now()) @map("last_evaluated_at") @db.Timestamptz
+  resolvedAt        DateTime?           @map("resolved_at") @db.Timestamptz
+  resolvedBy        BigInt?             @map("resolved_by") @db.BigInt
+  resolutionNotes   String?             @map("resolution_notes")
+  resolutionReason  String?             @map("resolution_reason")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  clinic            Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  run               DataQualityRun?     @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@unique([fingerprint, status], name: "unique_open_issue_fingerprint")
+  @@map("data_quality_issue")
+}
+
+model ClinicQualityScore {
+  clinicId          BigInt   @id @map("clinic_id") @db.BigInt
+  score             Int
+  completenessScore Int      @map("completeness_score")
+  verificationScore Int      @map("verification_score")
+  freshnessScore    Int      @map("freshness_score")
+  activeIssuesCount Int      @default(0) @map("active_issues_count")
+  factorBreakdown   Json     @default("{}") @map("factor_breakdown")
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("clinic_quality_score")
 }
