@@ -113,6 +113,7 @@ model Clinic {
   submissions        Submission[]
   qualityIssues      DataQualityIssue[]
   qualityScore       ClinicQualityScore?
+  importMatchedRows  ImportBatchRow[]
 
   @@map("clinic")
 }
@@ -486,3 +487,77 @@ model ClinicQualityScore {
 
   @@map("clinic_quality_score")
 }
+
+// Pipeline de Ingesta Avanzada (Fase 3, ADR-007, migración 0011_import_pipeline)
+enum ImportBatchStatus {
+  PENDING_ANALYSIS
+  ANALYZING
+  ANALYZED
+  APPLYING
+  COMPLETED
+  FAILED
+  CANCELLED
+
+  @@map("import_batch_status")
+}
+
+enum ImportRowStatus {
+  PENDING
+  VALID
+  POSSIBLE_DUPLICATE
+  INVALID
+  APPLIED
+  REJECTED
+  ERROR
+
+  @@map("import_row_status")
+}
+
+enum ImportActionType {
+  INSERT
+  UPDATE
+  SKIP
+
+  @@map("import_action_type")
+}
+
+model ImportBatch {
+  id            BigInt            @id @default(autoincrement()) @db.BigInt
+  filename      String
+  uploadedBy    BigInt?           @map("uploaded_by") @db.BigInt
+  status        ImportBatchStatus @default(PENDING_ANALYSIS)
+  totalRows     Int               @default(0) @map("total_rows")
+  validRows     Int               @default(0) @map("valid_rows")
+  duplicateRows Int               @default(0) @map("duplicate_rows")
+  errorRows     Int               @default(0) @map("error_rows")
+  appliedRows   Int               @default(0) @map("applied_rows")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt   DateTime?         @map("completed_at") @db.Timestamptz
+  rows          ImportBatchRow[]
+
+  @@map("import_batch")
+}
+
+model ImportBatchRow {
+  id              BigInt           @id @default(autoincrement()) @db.BigInt
+  batchId         BigInt           @map("batch_id") @db.BigInt
+  rowNumber       Int              @map("row_number")
+  rawData         Json             @map("raw_data")
+  parsedData      Json?            @map("parsed_data")
+  status          ImportRowStatus  @default(PENDING)
+  actionType      ImportActionType @default(INSERT) @map("action_type")
+  matchedClinicId BigInt?          @map("matched_clinic_id") @db.BigInt
+  matchReason     String?          @map("match_reason")
+  matchScore      Float?           @map("match_score")
+  differences     Json             @default("{}")
+  errorMessage    String?          @map("error_message")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  batch           ImportBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  matchedClinic   Clinic?          @relation(fields: [matchedClinicId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, rowNumber], name: "unique_batch_row_number")
+  @@map("import_batch_row")
+}
+

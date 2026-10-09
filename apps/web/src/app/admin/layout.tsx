@@ -69,6 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/fotos', label: 'Fotos', icon: '📸' },
     { href: '/admin/verificar', label: 'Verificaciones', icon: '🛡️' },
     { href: '/admin/calidad', label: 'Calidad de Datos', icon: '🎯' },
+    { href: '/admin/importar', label: 'Importación Masiva', icon: '📦' },
   ];
 
   return (
