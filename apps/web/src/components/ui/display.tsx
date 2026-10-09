@@ -6,13 +6,16 @@ export function Card({
   children,
   className = '',
   hoverable = false,
+  onClick,
 }: {
   children: ReactNode;
   className?: string;
   hoverable?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <div
+      onClick={onClick}
       className={`rounded-xl border border-border-subtle bg-surface shadow-card transition-shadow ${
         hoverable ? 'hover:shadow-md hover:border-border-hover' : ''
       } ${className}`}
