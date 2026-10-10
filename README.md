@@ -236,11 +236,3 @@ pnpm dev
 - **Descargo de Responsabilidad Sanitaria:**
   - Los puntajes de confiabilidad y estados de verificación indican completitud y constatación de datos públicos; no constituyen certificación médica ni reemplazan la fiscalización del SAG / Seremi de Salud.
 
----
-
-## 💼 Estrategia de Negocio y Monetización
-
-Para conocer el modelo comercial, flujos de ingresos (SaaS B2B para clínicas, patrocinios de laboratorios, derivación de procedimientos complejos e inteligencia territorial), unit economics proyectados y el plan de comercialización en la Región del Biobío, consulta el documento estratégico:
-
-👉 [`docs/cierre-desarrollo-modelo-negocio.md`](docs/cierre-desarrollo-modelo-negocio.md)
-
