@@ -7,7 +7,7 @@
     "start": "node dist/main.js",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest --config ./test/jest-unit.json",
     "test:unit": "jest --config ./test/jest-unit.json",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:migrate": "prisma migrate dev",

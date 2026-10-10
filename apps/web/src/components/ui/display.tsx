@@ -126,11 +126,13 @@ export function Alert({
   tone = 'info',
   title,
   children,
+  onClose,
   className = '',
 }: {
   tone?: AlertTone;
   title?: string;
   children: ReactNode;
+  onClose?: () => void;
   className?: string;
 }) {
   const config = ALERT_CONFIG[tone];
@@ -146,6 +148,18 @@ export function Alert({
         {title && <p className="font-semibold">{title}</p>}
         <div className={title ? 'mt-1 text-sm' : ''}>{children}</div>
       </div>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar notificación"
+          className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-md opacity-70 hover:opacity-100 transition focus:outline-none focus:ring-2 focus:ring-offset-1 text-current"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -167,18 +181,30 @@ export function Empty({
     <div
       className={`rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center ${className}`}
     >
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-alt text-2xl" aria-hidden="true">
-        🐾
+      <div
+        className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-alt text-brand-700"
+        aria-hidden="true"
+      >
+        <svg
+          className="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.75}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
       </div>
       <p className="text-lg font-semibold text-ink">{title}</p>
       {description && <p className="mt-1 text-sm text-ink-mute max-w-md mx-auto">{description}</p>}
       {hints && hints.length > 0 && (
-        <ul className="mt-4 space-y-1 text-sm text-ink-soft">
+        <ul className="mt-4 max-w-md mx-auto list-disc list-inside space-y-1.5 text-sm text-ink-soft text-left">
           {hints.map((h) => (
-            <li key={h} className="flex items-center justify-center gap-1.5">
-              <span aria-hidden="true" className="text-brand-600">
-                •
-              </span>
+            <li key={h} className="leading-relaxed">
               <span>{h}</span>
             </li>
           ))}

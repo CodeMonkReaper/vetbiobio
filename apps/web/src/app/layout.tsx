@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={sans.variable}>
+    <html lang="es" className={`${sans.variable} scroll-pt-20 scroll-pb-24`}>
       <body className="flex min-h-screen flex-col bg-paper font-sans text-ink antialiased">
         <a
           href="#contenido"
@@ -38,7 +38,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <TopBanner />
         <Header />
-        <main id="contenido" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <main
+          id="contenido"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 outline-none pb-20"
+        >
           {children}
         </main>
         <Footer />

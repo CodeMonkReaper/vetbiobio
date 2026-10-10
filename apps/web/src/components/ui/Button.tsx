@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import Link, { type LinkProps } from 'next/link';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -88,3 +89,42 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 });
 
 Button.displayName = 'Button';
+
+export interface ButtonLinkProps extends LinkProps {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+  className?: string;
+  children: ReactNode;
+  target?: string;
+  rel?: string;
+  'aria-label'?: string;
+}
+
+export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(function ButtonLink(
+  {
+    variant = 'primary',
+    size = 'md',
+    leftIcon,
+    rightIcon,
+    className = '',
+    children,
+    ...rest
+  },
+  ref
+) {
+  return (
+    <Link
+      ref={ref}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors select-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      {...rest}
+    >
+      {leftIcon}
+      <span>{children}</span>
+      {rightIcon}
+    </Link>
+  );
+});
+
+ButtonLink.displayName = 'ButtonLink';

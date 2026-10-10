@@ -1,9 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { adminApi } from '@/lib/admin';
+import { Card, Alert, Skeleton, Empty } from '@/components/ui/display';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import {
+  ClinicIcon,
+  SearchIcon,
+  InboxIcon,
+  ReportIcon,
+} from '@/components/admin/icons/AdminIcons';
 
 interface ClinicRow {
   id: string;
@@ -20,14 +30,33 @@ interface ClinicRow {
   updated_at: string;
 }
 
-export default function AdminClinics() {
+const COMMUNES = [
+  { cut: '08101', name: 'Concepción' },
+  { cut: '08102', name: 'Coronel' },
+  { cut: '08103', name: 'Chiguayante' },
+  { cut: '08104', name: 'Florida' },
+  { cut: '08105', name: 'Hualqui' },
+  { cut: '08106', name: 'Lota' },
+  { cut: '08107', name: 'Penco' },
+  { cut: '08108', name: 'San Pedro de la Paz' },
+  { cut: '08109', name: 'Santa Juana' },
+  { cut: '08110', name: 'Talcahuano' },
+  { cut: '08111', name: 'Tomé' },
+  { cut: '08112', name: 'Hualpén' },
+  { cut: '08301', name: 'Los Ángeles' },
+];
+
+export default function AdminClinicsPage() {
   const router = useRouter();
   const [clinics, setClinics] = useState<ClinicRow[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -44,17 +73,18 @@ export default function AdminClinics() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.append('status', statusFilter);
-      if (searchQuery) params.append('q', searchQuery);
+      if (searchQuery.trim()) params.append('q', searchQuery.trim());
       params.append('limit', '100');
 
       const res = await adminApi(`/admin/clinics?${params.toString()}`);
       setClinics(res.data as ClinicRow[]);
-      setError('');
-    } catch (e) {
-      if ((e as Error).message === 'UNAUTHORIZED') router.push('/admin/login');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al cargar clínicas';
+      if (msg === 'UNAUTHORIZED') router.push('/admin/login');
       else setError('No se pudo cargar el listado de clínicas.');
     } finally {
       setLoading(false);
@@ -62,25 +92,33 @@ export default function AdminClinics() {
   }, [statusFilter, searchQuery, router]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function handleStatusChange(id: string, newStatus: 'ACTIVE' | 'DRAFT' | 'INACTIVE' | 'CLOSED') {
+    setUpdatingId(id);
+    setError(null);
+    setSuccessMsg(null);
     try {
       await adminApi(`/admin/clinics/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
+      setSuccessMsg(`Estado actualizado a ${newStatus} correctamente.`);
       await load();
-    } catch (err) {
-      alert(`Error al cambiar estado: ${(err as Error).message}`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al cambiar estado.');
+    } finally {
+      setUpdatingId(null);
     }
   }
 
-  async function create(e: React.FormEvent) {
+  async function handleCreateClinic(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setCreating(true);
+    setError(null);
     try {
       await adminApi('/admin/clinics', {
         method: 'POST',
@@ -111,215 +149,264 @@ export default function AdminClinics() {
         isEmergency: false,
         is24h: false,
       });
+      setSuccessMsg('Clínica creada exitosamente en modo borrador (DRAFT).');
       await load();
-    } catch (err) {
-      setError(`No se pudo crear: ${(err as Error).message}`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear la clínica.');
+    } finally {
+      setCreating(false);
     }
   }
 
-  const communes = [
-    { cut: '08101', name: 'Concepción' },
-    { cut: '08102', name: 'Coronel' },
-    { cut: '08103', name: 'Chiguayante' },
-    { cut: '08104', name: 'Florida' },
-    { cut: '08105', name: 'Hualqui' },
-    { cut: '08106', name: 'Lota' },
-    { cut: '08107', name: 'Penco' },
-    { cut: '08108', name: 'San Pedro de la Paz' },
-    { cut: '08109', name: 'Santa Juana' },
-    { cut: '08110', name: 'Talcahuano' },
-    { cut: '08111', name: 'Tomé' },
-    { cut: '08112', name: 'Hualpén' },
-    { cut: '08301', name: 'Los Ángeles' },
-  ];
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return (
+          <span className="inline-flex items-center rounded-full bg-status-verified-bg px-2.5 py-0.5 text-xs font-semibold text-status-verified-text border border-status-verified-border">
+            Activa
+          </span>
+        );
+      case 'DRAFT':
+        return (
+          <span className="inline-flex items-center rounded-full bg-status-outdated-bg px-2.5 py-0.5 text-xs font-semibold text-status-outdated-text border border-status-outdated-border">
+            Borrador
+          </span>
+        );
+      case 'CLOSED':
+        return (
+          <span className="inline-flex items-center rounded-full bg-status-danger-bg px-2.5 py-0.5 text-xs font-semibold text-status-danger-text border border-status-danger-border">
+            Cerrada
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center rounded-full bg-surface-alt px-2.5 py-0.5 text-xs font-semibold text-ink-mute border border-border-subtle">
+            Inactiva
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Cabecera */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border-subtle pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestión de Clínicas</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Administra todas las veterinarias registradas, estados de publicación y ubicaciones.
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+            Directorio de Clínicas Veterinarias
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-ink-mute">
+            Administra las veterinarias registradas, estados de publicación y georreferenciación en Biobío.
           </p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => setShowCreateModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-2 self-start sm:self-auto"
+          leftIcon={<ClinicIcon className="w-4 h-4" />}
         >
-          <span>➕</span> Nueva Clínica
-        </button>
+          Nueva Clínica
+        </Button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {['', 'ACTIVE', 'DRAFT', 'INACTIVE', 'CLOSED'].map((st) => (
+      {/* Barra de Filtros y Búsqueda */}
+      <Card className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { id: '', label: 'Todas' },
+            { id: 'ACTIVE', label: 'Activas' },
+            { id: 'DRAFT', label: 'Borrador' },
+            { id: 'INACTIVE', label: 'Inactivas' },
+            { id: 'CLOSED', label: 'Cerradas' },
+          ].map((tab) => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                statusFilter === st
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700 ${
+                statusFilter === tab.id
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-ink-soft hover:bg-surface-alt hover:text-ink'
               }`}
             >
-              {st === '' ? 'Todas' : st}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="relative min-w-[240px]">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-mute">
+            <SearchIcon className="w-4 h-4" />
+          </div>
           <input
             type="text"
             placeholder="Buscar por nombre o slug..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-64"
+            className="w-full min-h-[44px] rounded-md border border-border bg-surface pl-9 pr-3 text-xs text-ink placeholder:text-ink-mute focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
           />
-          <button
-            onClick={() => load()}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
-          >
-            Buscar
-          </button>
         </div>
-      </div>
+      </Card>
 
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
-          {error}
-        </div>
+      {/* Alertas */}
+      {successMsg && (
+        <Alert tone="success" title="Operación completada">
+          {successMsg}
+        </Alert>
       )}
 
-      {/* Clinics Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-            <p className="mt-2 text-sm text-slate-500">Cargando clínicas...</p>
-          </div>
-        ) : clinics.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <p className="font-medium text-slate-600">No se encontraron clínicas con los filtros actuales.</p>
-          </div>
-        ) : (
+      {error && (
+        <Alert tone="error" title="Atención requerida">
+          {error}
+        </Alert>
+      )}
+
+      {/* Tabla de Clínicas */}
+      {loading ? (
+        <div className="space-y-3" aria-busy="true">
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+        </div>
+      ) : clinics.length === 0 ? (
+        <Empty
+          title="No se encontraron clínicas"
+          description={
+            searchQuery
+              ? `No hay clínicas registradas que coincidan con "${searchQuery}".`
+              : 'No hay clínicas registradas con el estado seleccionado.'
+          }
+          hints={['Verifica el término en el buscador.', 'Cambia el filtro de estado a "Todas".']}
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setStatusFilter('');
+                setSearchQuery('');
+              }}
+            >
+              Ver todas las clínicas
+            </Button>
+          }
+        />
+      ) : (
+        <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Clínica</th>
-                  <th className="py-3 px-4">Comuna</th>
-                  <th className="py-3 px-4">Estado</th>
-                  <th className="py-3 px-4">Verificación</th>
-                  <th className="py-3 px-4">Pendientes</th>
-                  <th className="py-3 px-4">Gestión</th>
-                  <th className="py-3 px-4 text-right">Cambiar Estado</th>
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border-subtle bg-surface-alt text-xs font-semibold text-ink-mute uppercase tracking-wider">
+                <tr>
+                  <th scope="col" className="px-5 py-3">Clínica</th>
+                  <th scope="col" className="px-5 py-3">Comuna</th>
+                  <th scope="col" className="px-5 py-3">Estado</th>
+                  <th scope="col" className="px-5 py-3">Verificación</th>
+                  <th scope="col" className="px-5 py-3">Pendientes</th>
+                  <th scope="col" className="px-5 py-3">Módulos</th>
+                  <th scope="col" className="px-5 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-border-subtle">
                 {clinics.map((c) => {
-                  let statusColor = 'bg-slate-100 text-slate-700';
-                  if (c.status === 'ACTIVE') statusColor = 'bg-emerald-100 text-emerald-800';
-                  else if (c.status === 'DRAFT') statusColor = 'bg-amber-100 text-amber-800';
-                  else if (c.status === 'CLOSED') statusColor = 'bg-rose-100 text-rose-800';
+                  const isRowUpdating = updatingId === c.id;
 
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{c.name}</div>
-                        <div className="text-xs text-slate-400 font-mono">/{c.slug}</div>
+                    <tr key={c.id} className="transition hover:bg-surface-alt/60">
+                      <td className="px-5 py-3.5">
+                        <div className="font-bold text-ink">{c.name}</div>
+                        <div className="text-xs text-ink-mute font-mono">/{c.slug}</div>
                       </td>
-                      <td className="py-3 px-4 text-xs text-slate-600 font-medium">
-                        {c.commune || 'Sin comuna'}
+                      <td className="px-5 py-3.5 text-xs text-ink-soft">
+                        <span className="font-medium">{c.commune || 'Sin comuna'}</span>
                         {!c.has_location && (
-                          <span className="block text-rose-500 text-[10px] font-bold">⚠️ Sin dirección</span>
+                          <span className="block text-status-danger-text text-[11px] font-semibold mt-0.5">
+                            Sin dirección georreferenciada
+                          </span>
                         )}
                       </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${statusColor}`}>
-                          {c.status}
-                        </span>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        {getStatusBadge(c.status)}
                       </td>
-                      <td className="py-3 px-4 text-xs text-slate-500">
-                        {c.verification_status}
+                      <td className="px-5 py-3.5 text-xs text-ink-mute">
+                        <Badge tone="neutral">{c.verification_status}</Badge>
                       </td>
-                      <td className="py-3 px-4 text-xs">
+                      <td className="px-5 py-3.5 text-xs">
                         <div className="flex items-center gap-1.5">
                           {c.pending_submissions > 0 && (
                             <Link
                               href={`/admin/aportes?clinicId=${c.id}&status=PENDING`}
-                              className="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[11px] hover:underline"
+                              className="inline-flex items-center gap-1 rounded bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-800 hover:underline border border-brand-200"
                             >
-                              📥 {c.pending_submissions}
+                              <InboxIcon className="w-3 h-3" />
+                              <span>{c.pending_submissions}</span>
                             </Link>
                           )}
                           {c.open_reports > 0 && (
                             <Link
                               href="/admin/reportes"
-                              className="bg-rose-100 text-rose-800 font-bold px-1.5 py-0.5 rounded text-[11px] hover:underline"
+                              className="inline-flex items-center gap-1 rounded bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-800 hover:underline border border-rose-200"
                             >
-                              🚨 {c.open_reports}
+                              <ReportIcon className="w-3 h-3" />
+                              <span>{c.open_reports}</span>
                             </Link>
                           )}
                           {c.pending_submissions === 0 && c.open_reports === 0 && (
-                            <span className="text-slate-300">-</span>
+                            <span className="text-ink-mute text-xs">—</span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-xs space-x-1 whitespace-nowrap">
-                        <Link
-                          href={`/admin/precios?clinica=${c.slug}`}
-                          className="text-blue-600 hover:underline px-1 py-0.5"
-                        >
-                          Precios
-                        </Link>
-                        <span>·</span>
-                        <Link
-                          href={`/admin/horarios?clinica=${c.slug}`}
-                          className="text-blue-600 hover:underline px-1 py-0.5"
-                        >
-                          Horarios
-                        </Link>
-                        <span>·</span>
-                        <Link
-                          href={`/admin/fotos?clinica=${c.slug}`}
-                          className="text-blue-600 hover:underline px-1 py-0.5"
-                        >
-                          Fotos
-                        </Link>
+                      <td className="px-5 py-3.5 text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-brand-700 font-medium">
+                          <Link href={`/admin/precios?clinica=${c.slug}`} className="hover:underline">
+                            Precios
+                          </Link>
+                          <span className="text-border">·</span>
+                          <Link href={`/admin/horarios?clinica=${c.slug}`} className="hover:underline">
+                            Horarios
+                          </Link>
+                          <span className="text-border">·</span>
+                          <Link href={`/admin/fotos?clinica=${c.slug}`} className="hover:underline">
+                            Fotos
+                          </Link>
+                        </div>
                       </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap space-x-1">
                         {c.status !== 'ACTIVE' && (
                           <button
+                            type="button"
                             onClick={() => handleStatusChange(c.id, 'ACTIVE')}
-                            disabled={!c.has_location}
-                            title={!c.has_location ? 'Requiere ubicación para publicar' : 'Publicar'}
-                            className="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-xs font-bold px-2 py-1 rounded transition disabled:opacity-40"
+                            disabled={!c.has_location || isRowUpdating}
+                            title={!c.has_location ? 'Requiere dirección para publicar' : 'Publicar'}
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-md transition disabled:opacity-40"
                           >
                             Publicar
                           </button>
                         )}
                         {c.status === 'ACTIVE' && (
                           <button
+                            type="button"
                             onClick={() => handleStatusChange(c.id, 'DRAFT')}
-                            className="bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-700 text-xs font-semibold px-2 py-1 rounded transition"
+                            disabled={isRowUpdating}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold px-2.5 py-1 rounded-md transition disabled:opacity-40"
                           >
-                            Borrador
+                            A Borrador
                           </button>
                         )}
                         {c.status !== 'INACTIVE' && (
                           <button
+                            type="button"
                             onClick={() => handleStatusChange(c.id, 'INACTIVE')}
-                            className="bg-slate-100 hover:bg-slate-700 hover:text-white text-slate-600 text-xs font-semibold px-2 py-1 rounded transition"
+                            disabled={isRowUpdating}
+                            className="bg-surface-alt hover:bg-slate-200 text-ink-soft border border-border-subtle text-xs font-semibold px-2.5 py-1 rounded-md transition disabled:opacity-40"
                           >
                             Desactivar
                           </button>
                         )}
                         {c.status !== 'CLOSED' && (
                           <button
+                            type="button"
                             onClick={() => handleStatusChange(c.id, 'CLOSED')}
-                            className="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 text-xs font-semibold px-2 py-1 rounded transition"
+                            disabled={isRowUpdating}
+                            className="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-semibold px-2.5 py-1 rounded-md transition disabled:opacity-40"
                           >
                             Cerrar
                           </button>
@@ -331,139 +418,153 @@ export default function AdminClinics() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </Card>
+      )}
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-lg font-bold text-slate-900">Crear Nueva Clínica (Borrador)</h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-700 text-xl font-bold"
+      {/* Modal Accesible para Crear Nueva Clínica */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          if (!creating) setShowCreateModal(false);
+        }}
+        title="Crear Nueva Clínica (Borrador)"
+        description="Registra los datos iniciales de una clínica. Se creará en estado DRAFT para revisión técnica antes de su publicación."
+      >
+        <form onSubmit={handleCreateClinic} className="space-y-4 text-xs">
+          <div>
+            <label htmlFor="clinic-name" className="block text-xs font-bold text-ink uppercase mb-1">
+              Nombre de la Clínica <span className="text-rose-600">*</span>
+            </label>
+            <input
+              id="clinic-name"
+              type="text"
+              required
+              placeholder="Ej: Veterinaria Biobío Salud"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full rounded-md border border-border bg-surface p-2 text-ink text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="clinic-address" className="block text-xs font-bold text-ink uppercase mb-1">
+              Dirección Física <span className="text-rose-600">*</span>
+            </label>
+            <input
+              id="clinic-address"
+              type="text"
+              required
+              placeholder="Ej: O'Higgins 1234"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              className="w-full rounded-md border border-border bg-surface p-2 text-ink text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="clinic-commune" className="block text-xs font-bold text-ink uppercase mb-1">
+                Comuna
+              </label>
+              <select
+                id="clinic-commune"
+                value={form.communeCut}
+                onChange={(e) => setForm({ ...form, communeCut: e.target.value })}
+                className="w-full rounded-md border border-border bg-surface p-2 text-ink text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
               >
-                &times;
-              </button>
+                {COMMUNES.map((c) => (
+                  <option key={c.cut} value={c.cut}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <form onSubmit={create} className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: Veterinaria Biobío Salud"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Dirección</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: O'Higgins 1234"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Comuna</label>
-                  <select
-                    value={form.communeCut}
-                    onChange={(e) => setForm({ ...form, communeCut: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800"
-                  >
-                    {communes.map((c) => (
-                      <option key={c.cut} value={c.cut}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Teléfono</label>
-                  <input
-                    type="text"
-                    placeholder="+569..."
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Latitud</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.latitude}
-                    onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Longitud</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.longitude}
-                    onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 font-mono text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.isEmergency}
-                    onChange={(e) => setForm({ ...form, isEmergency: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded"
-                  />
-                  Tiene Urgencias
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.is24h}
-                    onChange={(e) => setForm({ ...form, is24h: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded"
-                  />
-                  Atención 24 Horas
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-slate-600 font-semibold text-xs hover:bg-slate-100 rounded-lg transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition shadow-sm"
-                >
-                  Guardar Clínica
-                </button>
-              </div>
-            </form>
+            <div>
+              <label htmlFor="clinic-phone" className="block text-xs font-bold text-ink uppercase mb-1">
+                Teléfono de Contacto
+              </label>
+              <input
+                id="clinic-phone"
+                type="text"
+                placeholder="+569..."
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full rounded-md border border-border bg-surface p-2 text-ink text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="clinic-lat" className="block text-xs font-bold text-ink uppercase mb-1">
+                Latitud
+              </label>
+              <input
+                id="clinic-lat"
+                type="text"
+                required
+                value={form.latitude}
+                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                className="w-full rounded-md border border-border bg-surface p-2 text-ink font-mono text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+              />
+            </div>
+            <div>
+              <label htmlFor="clinic-lng" className="block text-xs font-bold text-ink uppercase mb-1">
+                Longitud
+              </label>
+              <input
+                id="clinic-lng"
+                type="text"
+                required
+                value={form.longitude}
+                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                className="w-full rounded-md border border-border bg-surface p-2 text-ink font-mono text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 pt-2">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-ink">
+              <input
+                type="checkbox"
+                checked={form.isEmergency}
+                onChange={(e) => setForm({ ...form, isEmergency: e.target.checked })}
+                className="h-4 w-4 text-brand-600 rounded border-border"
+              />
+              <span>Atención de Urgencias</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-ink">
+              <input
+                type="checkbox"
+                checked={form.is24h}
+                onChange={(e) => setForm({ ...form, is24h: e.target.checked })}
+                className="h-4 w-4 text-brand-600 rounded border-border"
+              />
+              <span>Atención 24 Horas</span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border-subtle">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowCreateModal(false)}
+              disabled={creating}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              isLoading={creating}
+            >
+              Guardar Clínica
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

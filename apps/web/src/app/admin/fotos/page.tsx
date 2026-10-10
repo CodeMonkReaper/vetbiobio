@@ -401,7 +401,6 @@ function FotosInner() {
                     <div className="space-y-1">
                       <div className="text-xs font-semibold text-slate-600">Vista previa:</div>
                       <div className="relative aspect-4/3 w-full bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={urlInput}
                           alt="Previsualización"
@@ -465,7 +464,6 @@ function FotosInner() {
                     <div className="space-y-1">
                       <div className="text-xs font-semibold text-slate-600">Vista previa local:</div>
                       <div className="relative aspect-4/3 w-full bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={previewFile}
                           alt="Previsualización"

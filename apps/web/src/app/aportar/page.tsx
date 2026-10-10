@@ -1,9 +1,8 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea, Checkbox } from '@/components/ui/fields';
 import { Card, Alert } from '@/components/ui/display';
 import { Badge } from '@/components/ui/Badge';
@@ -129,11 +128,12 @@ function AportarContent() {
           </div>
 
           <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
-            <Link href={`/aportar/estado?codigo=${encodeURIComponent(trackingCode)}`}>
-              <Button variant="primary">
-                Consultar estado de este aporte
-              </Button>
-            </Link>
+            <ButtonLink
+              href={`/aportar/estado?codigo=${encodeURIComponent(trackingCode)}`}
+              variant="primary"
+            >
+              Consultar estado de este aporte
+            </ButtonLink>
             <Button
               variant="secondary"
               onClick={() => {
@@ -181,11 +181,9 @@ function AportarContent() {
           </p>
         </div>
 
-        <Link href="/aportar/estado" className="shrink-0">
-          <Button variant="outline" size="sm">
-            🔍 Ya tengo un código de seguimiento
-          </Button>
-        </Link>
+        <ButtonLink href="/aportar/estado" variant="outline" size="sm" className="shrink-0">
+          🔍 Ya tengo un código de seguimiento
+        </ButtonLink>
       </div>
 
       {status === 'ERROR' && (

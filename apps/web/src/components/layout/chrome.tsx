@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { HeaderNav } from './HeaderNav';
 
 const LINKS = [
   { href: '/veterinarias', label: 'Veterinarias' },
@@ -9,45 +10,40 @@ const LINKS = [
 ];
 
 /**
- * Header accesible (§10): Logotipo territorial + navegación mobile-first + botón de acción con touch target 44px.
+ * Header accesible (§10): Logotipo territorial + navegación mobile-first de una sola fila.
  */
 export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border-subtle bg-surface/95 backdrop-blur-sm transition-colors">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-2 sm:py-3">
-        <div className="flex items-center gap-6">
-          <Link
-            href="/"
-            className="flex min-h-[44px] items-center gap-2 text-xl font-bold tracking-tight text-brand-700 transition hover:text-brand-800 focus-visible:rounded"
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:py-3 relative">
+        <Link
+          href="/"
+          className="flex min-h-[44px] items-center gap-2 text-xl font-bold tracking-tight text-brand-700 transition hover:text-brand-800 focus-visible:rounded"
+        >
+          <svg
+            className="h-6 w-6 text-brand-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden="true"
           >
-            <span className="text-2xl select-none" aria-hidden="true">
-              🐾
-            </span>
-            <span>VetBiobío</span>
-          </Link>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            />
+          </svg>
+          <span>VetBiobío</span>
+        </Link>
 
-          <nav
-            aria-label="Navegación principal"
-            className="flex items-center gap-1 overflow-x-auto text-sm font-medium text-ink-soft sm:gap-2"
-          >
-            {LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-md px-2.5 py-1.5 transition hover:bg-surface-alt hover:text-brand-700 focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
+        {/* Navegación responsiva con menú móvil plegable */}
         <div className="flex items-center gap-3">
+          <HeaderNav links={LINKS} />
           <Link
             href="/aportar"
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 active:bg-brand-800 focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700"
+            className="hidden md:inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 active:bg-brand-800 focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700"
           >
-            <span aria-hidden="true">➕</span>
             <span>Aportar Información</span>
           </Link>
         </div>
@@ -65,28 +61,31 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-xs text-ink-mute sm:flex-row">
         <div>
           <p>© {new Date().getFullYear()} VetBiobío — Directorio de Clínicas Veterinarias de la Región del Biobío.</p>
-          <p className="mt-1 text-[11px] text-ink-mute">
-            Proyecto de portafolio y servicio comunitario. Datos sujetos a verificación territorial.
+          <p className="mt-1 text-xs text-ink-mute">
+            Proyecto comunitario independiente. Datos sujetos a verificación territorial.
           </p>
         </div>
 
-        <nav aria-label="Legal y Enlaces" className="flex flex-wrap gap-4 font-medium">
-          <Link href="/aportar" className="text-brand-700 hover:underline">
+        <nav aria-label="Legal y Enlaces" className="flex flex-wrap items-center gap-x-4 gap-y-1 font-medium text-xs">
+          <Link href="/acerca" className="inline-flex min-h-[44px] items-center text-brand-700 hover:underline">
+            Acerca y Metodología
+          </Link>
+          <Link href="/aportar" className="inline-flex min-h-[44px] items-center text-ink-soft hover:text-brand-700">
             Colaborar
           </Link>
-          <Link href="/aportar/estado" className="text-ink-soft hover:text-brand-700">
+          <Link href="/aportar/estado" className="inline-flex min-h-[44px] items-center text-ink-soft hover:text-brand-700">
             Consultar Aporte
           </Link>
-          <Link href="/terminos" className="text-ink-soft hover:text-brand-700">
+          <Link href="/terminos" className="inline-flex min-h-[44px] items-center text-ink-soft hover:text-brand-700">
             Términos
           </Link>
-          <Link href="/privacidad" className="text-ink-soft hover:text-brand-700">
+          <Link href="/privacidad" className="inline-flex min-h-[44px] items-center text-ink-soft hover:text-brand-700">
             Privacidad
           </Link>
-          <Link href="/reportar" className="text-ink-soft hover:text-brand-700">
+          <Link href="/reportar" className="inline-flex min-h-[44px] items-center text-ink-soft hover:text-brand-700">
             Reportar
           </Link>
-          <Link href="/admin" className="text-ink-mute hover:text-ink">
+          <Link href="/admin" className="inline-flex min-h-[44px] items-center text-ink-mute hover:text-ink">
             Admin
           </Link>
         </nav>
@@ -116,7 +115,7 @@ export function Breadcrumbs({
             {t.href ? (
               <Link
                 href={t.href}
-                className="font-medium text-ink-soft transition hover:text-brand-700 hover:underline"
+                className="font-medium text-ink-soft transition hover:text-brand-700 hover:underline focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-700 rounded-sm"
               >
                 {t.label}
               </Link>

@@ -4,6 +4,7 @@ import type { ClinicSummary } from '@/types/domain';
 import { Card, FromPrice } from '@/components/ui/display';
 import { Badge, VerificationBadge } from '@/components/ui/Badge';
 import { CompareButton } from '@/components/comparison/CompareButton';
+import { EmergencyIcon, PinIcon } from '@/components/icons/PublicIcons';
 
 /**
  * Tarjeta de clínica veterinaria (§14):
@@ -14,22 +15,53 @@ export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
   const href = `/veterinarias/${clinic.commune_slug}/${clinic.slug}`;
 
   return (
-    <Card hoverable className="flex h-full flex-col justify-between p-5">
+    <Card hoverable className="group flex h-full flex-col justify-between p-5 motion-reduce:transform-none motion-reduce:transition-none">
       <div className="space-y-3">
-        {clinic.cover_photo_url && (
-          <div className="-mx-5 -mt-5 mb-3 overflow-hidden rounded-t-xl bg-surface-alt">
-            <Link href={href} tabIndex={-1} aria-hidden="true">
+        {/* Cabecera Visual (Fotografía real o Placeholder elegante con patrón de marca) */}
+        <div className="-mx-5 -mt-5 mb-3.5 overflow-hidden rounded-t-xl bg-surface-alt">
+          <Link href={href} tabIndex={-1} aria-hidden="true" className="block">
+            {clinic.cover_photo_url ? (
               <Image
                 src={clinic.cover_photo_url}
                 alt={`Instalaciones de ${clinic.name}`}
                 width={480}
                 height={192}
-                className="h-36 w-full object-cover transition duration-300 hover:scale-105"
+                className="h-36 w-full object-cover transition duration-300 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
                 loading="lazy"
               />
-            </Link>
-          </div>
-        )}
+            ) : (
+              <div className="relative flex h-36 w-full items-center justify-center overflow-hidden border-b border-border-subtle bg-gradient-to-br from-brand-50/90 via-surface-alt to-brand-100/40 transition duration-300 group-hover:brightness-[0.98]">
+                {/* Patrón geométrico sutil de fondo */}
+                <div
+                  className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(#146354_1.5px,transparent_1.5px)] [background-size:14px_14px]"
+                  aria-hidden="true"
+                />
+                {/* Emblema central de clínica veterinaria */}
+                <div className="relative flex flex-col items-center gap-1.5 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-brand-200/70 bg-surface text-brand-600 shadow-sm transition-transform duration-300 group-hover:scale-110 motion-reduce:transform-none">
+                    <svg
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.75}
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-medium tracking-wide text-ink-mute">
+                    Sin fotografía oficial
+                  </span>
+                </div>
+              </div>
+            )}
+          </Link>
+        </div>
 
         {/* Cabecera de Estados y Badges */}
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -40,7 +72,10 @@ export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
 
           <div className="flex flex-wrap items-center gap-1.5">
             {clinic.is_24h && (
-              <Badge tone="warning">🚨 24h</Badge>
+              <Badge tone="warning">
+                <EmergencyIcon className="h-3.5 w-3.5" />
+                <span>24h</span>
+              </Badge>
             )}
             {clinic.is_premium && (
               <Badge tone="brand">★ Destacada</Badge>
@@ -65,7 +100,7 @@ export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
           {/* Metadatos Territoriales y Horarios */}
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-mute">
             <span className="flex items-center gap-1 font-medium text-ink-soft">
-              <span aria-hidden="true">📍</span>
+              <PinIcon className="h-3.5 w-3.5 text-brand-600" />
               <span>{clinic.commune}</span>
             </span>
 
@@ -99,10 +134,7 @@ export function ClinicCard({ clinic }: { clinic: ClinicSummary }) {
           </span>
           <div className="mt-0.5 text-base font-bold text-ink">
             {clinic.min_price ? (
-              <div className="flex items-baseline gap-1">
-                <span className="text-xs font-normal text-ink-soft">Desde</span>
-                <FromPrice min={clinic.min_price} />
-              </div>
+              <FromPrice min={clinic.min_price} />
             ) : (
               <span className="text-xs font-medium text-ink-mute">A consultar en mesón</span>
             )}

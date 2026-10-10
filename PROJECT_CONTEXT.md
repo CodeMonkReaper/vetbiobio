@@ -2,7 +2,7 @@
 
 > Archivo obligatorio: todo avance se registra aquí con fecha (UTC) antes de darse por terminado.
 > Verdad técnica detallada en `docs/`. Si hay conflicto, manda el ADR más reciente.
-> Última actualización: 2026-10-08 (UTC) — Aportes ciudadanos moderados + Panel Admin completo + Fix migración 0004 y levanta local.
+> Última actualización: 2026-10-09 (UTC) — Rediseño integral UI/UX, tokens, accesibilidad WCAG 2.2 AA, y tests e2e con Playwright (Fases 0 a 4 de UI).
 
 ## 1. Estado actual
 
@@ -79,6 +79,15 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-08 | Fase 2: Motor Calidad de Datos & Auto-Healing | Migración `0010_data_quality`, 7 reglas desacopladas `QualityRule`, normalizador telefónico E.164 chileno (+569 / +5641), huella SHA-256 en índice parcial, auto-healing de incidencias resueltas, scoring ponderado con disclaimer legal visible, scheduler diario (cron 03:00 AM), panel `/admin/calidad` y badge de calidad en ficha pública |
 | 2026-10-08 | Fase 3: Ingesta Masiva y Deduplicación PostGIS | Migración `0011_import_pipeline` (`import_batch`, `import_batch_row`), cola asíncrona nativa en PostgreSQL 16 con `SELECT ... FOR UPDATE SKIP LOCKED` (sin Redis), deduplicador multicriterio 50/30/20 (PostGIS `ST_DWithin` + trigramas `pg_trgm` + E.164), diff engine, aplicación transaccional con auditoría, UI administrativa `/admin/importar` con subida CSV y visor de diferencias |
 | 2026-10-08 | Fase 4: Portafolio, Observabilidad y Hardening | Middleware `CorrelationIdMiddleware` (`x-correlation-id`), health check profundo (`/health` con DB ping, latencia ms, versión PostGIS, memoria), arquitectura documentada en `ADR-007`, `ADR-008`, `ADR-009`, `README.md` reescrito con diagramas Mermaid y matriz de hallazgos para evaluación técnica en 10 minutos |
+| 2026-10-09 | Docker compose | Soporte completo de despliegue contenerizado con docker compose fix (`fix(docker)`) |
+| 2026-10-09 | UI Fase 0: Diagnóstico | Diagnóstico exhaustivo de interfaz, consistencia visual y accesibilidad WCAG 2.2 AA (`docs/ui`) |
+| 2026-10-09 | UI Fase 1: Tokens y Sistema de Diseño | Sistema de diseño, tokens semánticos, tabla de contrastes y componentes base (`docs/ui`) |
+| 2026-10-09 | UI Fase 2: Componentes Base Accesibles | Implementación y uso de tokens semánticos y componentes base en toda la app |
+| 2026-10-09 | UI Fase 3: Refactorización de Pantallas | Rediseño mobile-first y accesible de Home, Directorio, Ficha Detalle, Formulario de Aportes y Panel de Moderación |
+| 2026-10-09 | UI Fase 4: Auditoría y Seeds | Verificación WCAG 2.2 AA final, mejoras de auditoría en Playwright, replicación avanzada de horarios y seed ampliado a 26 clínicas |
+| 2026-10-09 | Refinamiento UI/UX Cards & Login | Banner placeholder uniforme para cards sin foto (h-36), fix duplicación 'Desde' en aranceles, y rediseño integral accesible de `/admin/login` con tokens VetBiobío |
+| 2026-10-09 | Edición de Datos en Aportes Admin | Editor interactivo dual (formulario de campos clave + editor JSON en vivo con formateador y validación de sintaxis) en `/admin/aportes/[id]` con guardado transaccional y auditoría |
+| 2026-10-09 | Rediseño Portada, Listado, Accesibilidad WCAG 2.2 AA y SEO | Catálogo 33 comunas (`data/communes.ts`), 17 SVG (`PublicIcons.tsx`, cero emojis), `ButtonLink` polimórfico, `TopBanner` descartable en `sessionStorage`, `HeaderNav` móvil con Escape/aria-expanded, `/acerca#metodologia`, chips de filtros interactivos en `/veterinarias`, fix títulos duplicados, robots/sitemap ampliados, 55 pruebas web (131 tests monorepo) |
 
 ## 4. Próximo paso inmediato
 

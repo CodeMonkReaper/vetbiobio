@@ -3,6 +3,7 @@ import type { ClinicProfile } from '@/types/domain';
 import { Badge, VerificationBadge } from '@/components/ui/Badge';
 import { TrackView, ContactLink } from '@/features/tracking/Track';
 import { ClinicReliability, type ReliabilityData } from './ClinicReliability';
+import { EmergencyIcon } from '@/components/icons/PublicIcons';
 
 /**
  * Cabecera principal de la ficha (§18):
@@ -31,7 +32,12 @@ export function ClinicHero({
             status={clinic.verification_status}
             verifiedAt={clinic.verified_at}
           />
-          {clinic.is_24h && <Badge tone="warning">🚨 Urgencias 24 Horas</Badge>}
+          {clinic.is_24h && (
+            <Badge tone="warning">
+              <EmergencyIcon className="h-3.5 w-3.5" />
+              <span>Urgencias 24 Horas</span>
+            </Badge>
+          )}
           {clinic.is_emergency && !clinic.is_24h && <Badge tone="warning">Urgencias</Badge>}
           {clinic.is_premium && <Badge tone="brand">★ Establecimiento Destacado</Badge>}
           {clinic.is_sponsored && <Badge tone="neutral">Patrocinado</Badge>}

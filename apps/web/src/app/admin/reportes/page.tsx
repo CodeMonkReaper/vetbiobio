@@ -4,137 +4,258 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { adminApi } from '@/lib/admin';
+import { Card, Alert, Skeleton, Empty } from '@/components/ui/display';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import {
+  ReportIcon,
+  RefreshIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClinicIcon,
+} from '@/components/admin/icons/AdminIcons';
 
-type Report = {
-  id: number;
+type ReportItem = {
+  id: string;
   reason: string;
   message: string | null;
   status: string;
-  createdAt?: string;
+  createdAt: string;
   clinic: { slug: string; name: string } | null;
 };
 
-export default function AdminReportes() {
+const STATUS_TABS = [
+  { id: 'OPEN', label: 'Abiertos' },
+  { id: 'TRIAGED', label: 'En Revisión' },
+  { id: 'RESOLVED', label: 'Resueltos' },
+  { id: 'REJECTED', label: 'Descartados' },
+];
+
+export default function AdminReportesPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<Report[]>([]);
-  const [error, setError] = useState('');
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [statusFilter, setStatusFilter] = useState('OPEN');
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionProcessingId, setActionProcessingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await adminApi('/admin/reports');
-      setRows(res as Report[]);
-      setError('');
-    } catch (e) {
-      if ((e as Error).message === 'UNAUTHORIZED') router.push('/admin/login');
-      else setError((e as Error).message);
+      const res = await adminApi(`/admin/reports?status=${statusFilter}`);
+      setReports(res as ReportItem[]);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al cargar reportes';
+      if (msg === 'UNAUTHORIZED') router.push('/admin/login');
+      else setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [statusFilter, router]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function resolve(id: number, status: string) {
+  async function handleResolve(id: string, newStatus: 'TRIAGED' | 'RESOLVED' | 'REJECTED') {
+    setActionProcessingId(id);
+    setError(null);
+    setSuccessMsg(null);
     try {
       await adminApi(`/admin/reports/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: newStatus }),
       });
+      setSuccessMsg(
+        newStatus === 'RESOLVED'
+          ? `Reporte #${id} marcado como resuelto.`
+          : newStatus === 'TRIAGED'
+          ? `Reporte #${id} puesto en revisión.`
+          : `Reporte #${id} descartado.`
+      );
       await load();
-    } catch (e) {
-      alert(`Error al actualizar reporte: ${(e as Error).message}`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al actualizar reporte.');
+    } finally {
+      setActionProcessingId(null);
     }
   }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Cabecera */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border-subtle pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Reportes de Usuarios</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Reclamos, errores detectados y avisos enviados sobre fichas clínicas.
+          <div className="flex items-center gap-2.5">
+            <ReportIcon className="w-6 h-6 text-amber-600" />
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              Reportes de Incidencias
+            </h1>
+          </div>
+          <p className="mt-1 text-xs sm:text-sm text-ink-mute">
+            Reclamos, datos desactualizados e incidencias reportadas por usuarios sobre las clínicas del directorio.
           </p>
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => void load()}
-          className="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition self-start sm:self-auto"
+          leftIcon={<RefreshIcon className="w-4 h-4" />}
         >
-          🔄 Actualizar
-        </button>
+          Actualizar
+        </Button>
       </div>
 
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
-          {error}
+      {/* Pestañas de Estado */}
+      <Card className="p-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700 ${
+                statusFilter === tab.id
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-ink-soft hover:bg-surface-alt hover:text-ink'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+      </Card>
+
+      {/* Notificaciones */}
+      {successMsg && (
+        <Alert tone="success" title="Acción realizada">
+          {successMsg}
+        </Alert>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
-            <p className="mt-2 text-sm text-slate-500">Cargando reportes...</p>
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <span className="text-4xl block mb-2">🎉</span>
-            <p className="font-medium text-slate-600">No hay reportes abiertos pendientes.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {rows.map((r) => (
-              <div key={r.id} className="p-5 hover:bg-slate-50/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                      {r.reason}
-                    </span>
-                    <span className="text-xs font-mono text-slate-400">ID #{r.id}</span>
+      {error && (
+        <Alert tone="error" title="Error en la operación">
+          {error}
+        </Alert>
+      )}
+
+      {/* Listado */}
+      {loading ? (
+        <div className="space-y-3" aria-busy="true">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+      ) : reports.length === 0 ? (
+        <Empty
+          title="Sin incidencias en esta categoría"
+          description={`No hay reportes actualmente con estado "${statusFilter}".`}
+          hints={[
+            'Revisa las otras pestañas para consultar reportes en revisión o históricos resueltos.',
+          ]}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => setStatusFilter('OPEN')}>
+              Ver reportes abiertos
+            </Button>
+          }
+        />
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="divide-y divide-border-subtle">
+            {reports.map((report) => {
+              const isProcessing = actionProcessingId === report.id;
+
+              return (
+                <div
+                  key={report.id}
+                  className="p-5 hover:bg-surface-alt/50 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={report.status === 'RESOLVED' ? 'brand' : 'warning'}>
+                        {report.reason}
+                      </Badge>
+                      <span className="font-mono text-xs text-ink-mute bg-surface-alt px-2 py-0.5 rounded border border-border-subtle">
+                        #{report.id}
+                      </span>
+                      <span className="text-xs text-ink-mute tabular-nums">
+                        {new Date(report.createdAt).toLocaleDateString('es-CL', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                      {report.clinic ? (
+                        <Link
+                          href={`/admin/clinics?q=${encodeURIComponent(report.clinic.slug)}`}
+                          className="text-brand-700 hover:underline flex items-center gap-1"
+                        >
+                          <ClinicIcon className="w-4 h-4 text-emerald-600" />
+                          <span>{report.clinic.name}</span>
+                          <span className="font-mono text-xs text-ink-mute font-normal">
+                            (/{report.clinic.slug})
+                          </span>
+                        </Link>
+                      ) : (
+                        <span className="text-ink-mute italic text-xs">Sin clínica específica vinculada</span>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-ink-soft bg-surface-alt/70 p-3 rounded-lg border border-border-subtle max-w-3xl leading-relaxed whitespace-pre-wrap">
+                      {report.message || 'Sin mensaje descriptivo adicional'}
+                    </div>
                   </div>
-                  <div className="text-sm font-semibold text-slate-900">
-                    {r.clinic ? (
-                      <Link href={`/admin/clinics`} className="text-emerald-700 hover:underline">
-                        🏥 {r.clinic.name}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-400 italic">Sin clínica específica</span>
+
+                  {/* Acciones de Resolución */}
+                  <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+                    {report.status !== 'TRIAGED' && report.status !== 'RESOLVED' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleResolve(report.id, 'TRIAGED')}
+                        disabled={isProcessing}
+                        className="inline-flex min-h-[38px] items-center justify-center rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-alt transition disabled:opacity-50"
+                      >
+                        En Revisión
+                      </button>
+                    )}
+
+                    {report.status !== 'RESOLVED' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleResolve(report.id, 'RESOLVED')}
+                        disabled={isProcessing}
+                        className="inline-flex min-h-[38px] items-center gap-1.5 justify-center rounded-md bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-1.5 text-xs font-bold transition disabled:opacity-50 shadow-sm"
+                      >
+                        <CheckCircleIcon className="w-3.5 h-3.5" />
+                        <span>Resolver</span>
+                      </button>
+                    )}
+
+                    {report.status !== 'REJECTED' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleResolve(report.id, 'REJECTED')}
+                        disabled={isProcessing}
+                        className="inline-flex min-h-[38px] items-center gap-1.5 justify-center rounded-md bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50"
+                      >
+                        <XCircleIcon className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Descartar</span>
+                      </button>
                     )}
                   </div>
-                  <p className="text-sm text-slate-600 max-w-2xl bg-slate-50 p-3 rounded-lg border border-slate-200/60">
-                    {r.message || 'Sin mensaje adicional del usuario'}
-                  </p>
                 </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                  <button
-                    onClick={() => void resolve(r.id, 'TRIAGED')}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                  >
-                    En Revisión
-                  </button>
-                  <button
-                    onClick={() => void resolve(r.id, 'RESOLVED')}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition"
-                  >
-                    Resolver
-                  </button>
-                  <button
-                    onClick={() => void resolve(r.id, 'REJECTED')}
-                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                  >
-                    Descartar
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        )}
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

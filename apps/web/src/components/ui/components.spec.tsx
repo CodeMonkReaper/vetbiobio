@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { VerificationBadge, Badge } from './Badge';
-import { PriceDisplay, Alert, Empty } from './display';
+import { VerificationBadge } from './Badge';
+import { PriceDisplay } from './display';
 import { Button } from './Button';
 import { Field, Input, Checkbox } from './fields';
 import { Modal } from './Modal';

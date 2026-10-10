@@ -1,13 +1,15 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminApi } from '@/lib/admin';
 import { AdminClinicHeader } from '@/components/admin/AdminClinicHeader';
-import { Card } from '@/components/ui/display';
+import { Card, Alert } from '@/components/ui/display';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Field, Select } from '@/components/ui/fields';
+import { ClockIcon, CalendarIcon, ZapIcon, RefreshIcon } from '@/components/admin/icons/AdminIcons';
+import { validateScheduleForm } from '@/lib/admin-form-validation';
 
 const DAYS_ORDERED = [
   { index: 1, name: 'Lunes' },
@@ -116,10 +118,21 @@ function HorariosInner() {
     if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
   }
 
+  // Validación previa en cliente de intervalos de apertura y cierre
+  const validationError = useMemo(() => {
+    return validateScheduleForm(form);
+  }, [form]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setSaving(true);
     try {
       let openTime: string | undefined = form.open;
@@ -221,41 +234,15 @@ function HorariosInner() {
       >
         {/* Notificaciones */}
         {error && (
-          <div
-            role="alert"
-            className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
-              <span>{error}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setError('')}
-              className="text-rose-500 hover:text-rose-700 text-sm font-bold"
-            >
-              ✕
-            </button>
-          </div>
+          <Alert tone="error" title="Error" onClose={() => setError('')}>
+            {error}
+          </Alert>
         )}
 
         {success && (
-          <div
-            role="status"
-            className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">✅</span>
-              <span>{success}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSuccess('')}
-              className="text-emerald-500 hover:text-emerald-700 text-sm font-bold"
-            >
-              ✕
-            </button>
-          </div>
+          <Alert tone="success" title="Horario Actualizado" onClose={() => setSuccess('')}>
+            {success}
+          </Alert>
         )}
 
         {/* Acciones de atajo y replicación */}
@@ -263,15 +250,15 @@ function HorariosInner() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
             <div>
               <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                <span>⚡</span>
+                <ZapIcon className="w-4 h-4 text-amber-600" />
                 <span>Plantillas y Replicación Rápida de Horario</span>
               </div>
               <div className="text-xs text-slate-500">
                 Usa el horario del Lunes como base para configurar rápidamente los turnos semanales.
               </div>
             </div>
-            <span className="text-[11px] text-slate-400">
-              {scheduleMap.has(1) ? '✓ Lunes configurado como plantilla' : '⚠️ Configura el Lunes primero'}
+            <span className="text-[11px] text-slate-500">
+              {scheduleMap.has(1) ? '✓ Lunes configurado como plantilla' : 'Configura el Lunes primero'}
             </span>
           </div>
 
@@ -282,9 +269,10 @@ function HorariosInner() {
               size="sm"
               onClick={() => void replicateSchedule([2, 3, 4, 5], 'Lunes a Viernes')}
               disabled={saving || loading || !scheduleMap.has(1)}
-              className="text-xs"
+              className="text-xs inline-flex items-center gap-1.5"
             >
-              📅 Replicar a Lunes - Viernes
+              <CalendarIcon className="w-3.5 h-3.5 text-slate-500" />
+              <span>Replicar Lunes a Viernes</span>
             </Button>
 
             <Button
@@ -293,9 +281,10 @@ function HorariosInner() {
               size="sm"
               onClick={() => void replicateSchedule([2, 3, 4, 5, 6], 'Lunes a Sábado')}
               disabled={saving || loading || !scheduleMap.has(1)}
-              className="text-xs"
+              className="text-xs inline-flex items-center gap-1.5"
             >
-              🗓️ Replicar a Lunes - Sábado
+              <CalendarIcon className="w-3.5 h-3.5 text-slate-500" />
+              <span>Replicar Lunes a Sábado</span>
             </Button>
 
             <Button
@@ -304,9 +293,10 @@ function HorariosInner() {
               size="sm"
               onClick={() => void replicateSchedule([0, 2, 3, 4, 5, 6], 'Toda la Semana')}
               disabled={saving || loading || !scheduleMap.has(1)}
-              className="text-xs"
+              className="text-xs inline-flex items-center gap-1.5"
             >
-              🔄 Replicar los 7 Días
+              <RefreshIcon className="w-3.5 h-3.5 text-slate-500" />
+              <span>Replicar los 7 Días</span>
             </Button>
 
             <Button
@@ -315,9 +305,10 @@ function HorariosInner() {
               size="sm"
               onClick={() => void setEmergency247()}
               disabled={saving || loading}
-              className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+              className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50 inline-flex items-center gap-1.5"
             >
-              🚨 Establecer Urgencia 24/7
+              <ZapIcon className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Establecer Urgencia 24/7</span>
             </Button>
           </div>
         </div>
@@ -355,11 +346,11 @@ function HorariosInner() {
                     <div className="text-xs text-slate-400 italic">Sin configurar</div>
                   ) : sched.is_closed ? (
                     <Badge tone="error" size="sm">
-                      🔴 Cerrado
+                      Cerrado
                     </Badge>
                   ) : is24h ? (
                     <Badge tone="success" size="sm">
-                      🌟 24 Horas
+                      24 Horas
                     </Badge>
                   ) : (
                     <div className="space-y-0.5">
@@ -388,7 +379,7 @@ function HorariosInner() {
           <Card className="p-6 bg-white border border-slate-200 shadow-sm space-y-5">
             <div>
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>🕒</span>
+                <ClockIcon className="w-5 h-5 text-teal-600" />
                 <span>
                   Editar Horario — {DAYS_ORDERED.find((d) => d.index === form.day)?.name}
                 </span>
@@ -427,7 +418,7 @@ function HorariosInner() {
                     }
                     className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
-                  <span>🚫 Cerrado todo el día</span>
+                  <span>Cerrado todo el día</span>
                 </label>
 
                 {!form.closed && (
@@ -445,7 +436,7 @@ function HorariosInner() {
                       }
                       className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                     />
-                    <span>🌟 Urgencia / Atención 24 Horas continuas</span>
+                    <span>Urgencia / Atención 24 Horas continuas</span>
                   </label>
                 )}
               </div>
@@ -454,8 +445,8 @@ function HorariosInner() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label
-                      htmlFor="opening-time"
-                      className="block text-sm font-semibold text-slate-700 mb-1"
+                        htmlFor="opening-time"
+                        className="block text-sm font-semibold text-slate-700 mb-1"
                     >
                       Hora Apertura
                     </label>
@@ -488,11 +479,17 @@ function HorariosInner() {
                 </div>
               )}
 
+              {validationError && (
+                <Alert tone="warning" title="Discrepancia de Intervalo">
+                  {validationError}
+                </Alert>
+              )}
+
               <Button
                 type="submit"
                 variant="primary"
                 className="w-full justify-center"
-                disabled={saving}
+                disabled={saving || Boolean(validationError)}
               >
                 {saving ? 'Guardando horario...' : 'Guardar Horario'}
               </Button>

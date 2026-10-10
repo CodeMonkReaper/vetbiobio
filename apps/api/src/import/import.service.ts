@@ -294,7 +294,7 @@ export class ImportService {
               },
             });
 
-            // 4. Ubicación PostGIS si hay coordenadas
+            // 4. Ubicación PostGIS (opcional si hay coordenadas)
             if (parsed.latitude && parsed.longitude) {
               await tx.$executeRaw`
                 INSERT INTO clinic_location (clinic_id, address, commune_id, latitude, longitude, location)
@@ -305,6 +305,15 @@ export class ImportService {
                   ${parsed.latitude},
                   ${parsed.longitude},
                   ST_SetSRID(ST_MakePoint(${parsed.longitude}, ${parsed.latitude}), 4326)::geography
+                )
+              `;
+            } else {
+              await tx.$executeRaw`
+                INSERT INTO clinic_location (clinic_id, address, commune_id)
+                VALUES (
+                  ${created.id},
+                  ${parsed.address || null},
+                  ${communeId}
                 )
               `;
             }

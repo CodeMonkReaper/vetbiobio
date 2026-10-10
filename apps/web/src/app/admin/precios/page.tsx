@@ -4,10 +4,12 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminApi } from '@/lib/admin';
 import { AdminClinicHeader } from '@/components/admin/AdminClinicHeader';
-import { Card } from '@/components/ui/display';
+import { Card, Alert } from '@/components/ui/display';
 import { Badge } from '@/components/ui/Badge';
 import { Field, Input, Select } from '@/components/ui/fields';
 import { Button } from '@/components/ui/Button';
+import { PriceIcon, EditIcon } from '@/components/admin/icons/AdminIcons';
+import { validatePriceForm } from '@/lib/admin-form-validation';
 
 type Row = {
   id: number;
@@ -116,10 +118,21 @@ function PreciosInner() {
     if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
   }
 
+  // Validación previa en cliente de montos y modalidades
+  const validationError = useMemo(() => {
+    return validatePriceForm(form);
+  }, [form]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setSaving(true);
     try {
       const kind = form.kind === 'exam' ? 'exam' : 'service';
@@ -137,8 +150,8 @@ function PreciosInner() {
       });
       setSuccess('Arancel actualizado con éxito. El valor previo quedó archivado en auditoría.');
       await load();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar arancel');
     } finally {
       setSaving(false);
     }
@@ -174,7 +187,10 @@ function PreciosInner() {
             <div className="text-xs text-slate-500 mt-0.5">Servicios y exámenes disponibles</div>
           </Card>
           <Card className="p-4 bg-white border border-emerald-200 bg-emerald-50/30">
-            <div className="text-xs uppercase font-bold text-emerald-800">Con Precio Vigente</div>
+            <div className="text-xs uppercase font-bold text-emerald-800 flex items-center gap-1.5">
+              <PriceIcon className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Con Precio Vigente</span>
+            </div>
             <div className="text-2xl font-bold text-emerald-900 mt-1">{stats.withPrice} activos</div>
             <div className="text-xs text-emerald-700 mt-0.5">Visibles con arancel en CLP</div>
           </Card>
@@ -187,41 +203,15 @@ function PreciosInner() {
 
         {/* Notificaciones */}
         {error && (
-          <div
-            role="alert"
-            className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
-              <span>{error}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setError('')}
-              className="text-rose-500 hover:text-rose-700 text-sm font-bold"
-            >
-              ✕
-            </button>
-          </div>
+          <Alert tone="error" title="Error" onClose={() => setError('')}>
+            {error}
+          </Alert>
         )}
 
         {success && (
-          <div
-            role="status"
-            className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">✅</span>
-              <span>{success}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSuccess('')}
-              className="text-emerald-500 hover:text-emerald-700 text-sm font-bold"
-            >
-              ✕
-            </button>
-          </div>
+          <Alert tone="success" title="Arancel Actualizado" onClose={() => setSuccess('')}>
+            {success}
+          </Alert>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -296,7 +286,7 @@ function PreciosInner() {
                                 tone={r.kind === 'service' ? 'info' : 'neutral'}
                                 size="sm"
                               >
-                                {r.kind === 'service' ? '🩺 Servicio' : '🔬 Examen'}
+                                {r.kind === 'service' ? 'Servicio' : 'Examen'}
                               </Badge>
                             </td>
                             <td className="py-2.5 px-3 text-slate-900">
@@ -349,7 +339,7 @@ function PreciosInner() {
             <Card className="p-5 bg-white border border-slate-200 shadow-sm space-y-4">
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>✏️</span>
+                  <EditIcon className="w-5 h-5 text-teal-600" />
                   <span>Actualizar Arancel</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -449,11 +439,17 @@ function PreciosInner() {
                   </div>
                 </div>
 
+                {validationError && (
+                  <Alert tone="warning" title="Discrepancia de Arancel">
+                    {validationError}
+                  </Alert>
+                )}
+
                 <Button
                   type="submit"
                   variant="primary"
                   className="w-full justify-center"
-                  disabled={saving || !form.id}
+                  disabled={saving || !form.id || Boolean(validationError)}
                 >
                   {saving ? 'Guardando arancel...' : 'Guardar y Publicar Arancel'}
                 </Button>

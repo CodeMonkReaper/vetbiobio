@@ -1,46 +1,86 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SearchBar } from '@/features/search/SearchBar';
 import { Card } from '@/components/ui/display';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
+import { fetchClinics } from '@/lib/api';
+import { BIOBIO_COMMUNES } from '@/data/communes';
+import {
+  EmergencyIcon,
+  ClockIcon,
+  MicroscopeIcon,
+  TagIcon,
+  StethoscopeIcon,
+  SyringeIcon,
+  HospitalIcon,
+  CameraIcon,
+  BrainIcon,
+  BirdIcon,
+  ShieldIcon,
+  PriceBadgeIcon,
+  ScalesIcon,
+} from '@/components/icons/PublicIcons';
 
-// Accesos prioritarios para situaciones de urgencia y búsqueda rápida
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vetbiobio.cl';
+
+export const metadata: Metadata = {
+  title: 'Directorio de Clínicas Veterinarias en la Región del Biobío',
+  description:
+    'Encuentra veterinarias verificadas, urgencias 24 horas y aranceles referenciales en Concepción, Talcahuano, Los Ángeles y las 33 comunas del Biobío.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'VetBiobío — Directorio de Clínicas Veterinarias',
+    description:
+      'Directorio territorial con aranceles referenciales, urgencias 24h y verificación activa.',
+    url: SITE,
+    siteName: 'VetBiobío',
+    locale: 'es_CL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'VetBiobío — Directorio de Clínicas Veterinarias',
+    description:
+      'Directorio territorial con aranceles referenciales, urgencias 24h y verificación activa.',
+  },
+};
+
+// Accesos prioritarios compactos sin insignias redundantes
 const EMERGENCY_ACTIONS = [
   {
     title: 'Urgencias 24 Horas',
-    description: 'Guardia veterinaria nocturna y atención médica continua.',
+    description: 'Guardia veterinaria continua para emergencias críticas.',
     href: '/veterinarias?emergency=true',
-    icon: '🚨',
+    icon: EmergencyIcon,
     accent: 'border-status-outdated-border bg-amber-50/50 hover:bg-amber-50',
-    badge: 'Urgencia',
-    badgeTone: 'warning' as const,
+    iconBg: 'bg-amber-100 text-amber-800',
   },
   {
     title: 'Abierto Ahora',
-    description: 'Clínicas con atención presencial confirmada en este momento.',
+    description: 'Clínicas con atención médica presencial en este momento.',
     href: '/veterinarias?open_now=true',
-    icon: '🕒',
+    icon: ClockIcon,
     accent: 'border-status-verified-border bg-brand-50/40 hover:bg-brand-50/70',
-    badge: 'En servicio',
-    badgeTone: 'success' as const,
+    iconBg: 'bg-brand-100 text-brand-800',
   },
   {
     title: 'Exámenes y Diagnóstico',
     description: 'Rayos X, ecografía abdominal y laboratorio clínico regional.',
-    href: '/veterinarias?exam=radiografia',
-    icon: '🔬',
+    href: '/examenes/radiografia',
+    icon: MicroscopeIcon,
     accent: 'border-status-unverified-border bg-sky-50/40 hover:bg-sky-50/70',
-    badge: 'Imagenología',
-    badgeTone: 'info' as const,
+    iconBg: 'bg-sky-100 text-sky-800',
   },
   {
     title: 'Aranceles Públicos',
-    description: 'Valores informados de consulta y vacunas para evitar sorpresas.',
-    href: '/veterinarias?sort=aranceles',
-    icon: '🏷️',
+    description: 'Valores informados de consulta y vacunas ordenados por precio.',
+    href: '/veterinarias?sort=PRICE_ASC',
+    icon: TagIcon,
     accent: 'border-border-subtle bg-surface hover:bg-surface-alt',
-    badge: 'Precios',
-    badgeTone: 'neutral' as const,
+    iconBg: 'bg-surface-alt text-ink',
   },
 ];
 
@@ -48,42 +88,42 @@ const POPULAR_SERVICES = [
   {
     title: 'Consulta General',
     desc: 'Chequeo clínico primario, triaje y medicina preventiva.',
-    href: '/veterinarias?service=consulta-general',
-    icon: '🩺',
+    href: '/servicios/consulta-general',
+    icon: StethoscopeIcon,
   },
   {
     title: 'Vacunación y Chip',
     desc: 'Antirrábica, séxtuple, triple felina e implantación de microchip.',
-    href: '/veterinarias?service=vacunacion',
-    icon: '💉',
+    href: '/servicios/vacunacion',
+    icon: SyringeIcon,
   },
   {
     title: 'Cirugía y Pabellón',
     desc: 'Esterilizaciones, tejidos blandos y cirugía de urgencia.',
-    href: '/veterinarias?service=cirugia-general',
-    icon: '🏥',
+    href: '/servicios/cirugia-general',
+    icon: HospitalIcon,
   },
   {
     title: 'Ecografía y Rayos X',
     desc: 'Imagenología diagnóstica, radiografía digital y Doppler.',
-    href: '/veterinarias?exam=ecografia',
-    icon: '📷',
+    href: '/examenes/ecografia',
+    icon: CameraIcon,
   },
   {
     title: 'Especialidades Médicas',
     desc: 'Dermatología, traumatología, neurología y oftalmología.',
-    href: '/veterinarias?specialty=dermatologia',
-    icon: '🧠',
+    href: '/especialidades/dermatologia',
+    icon: BrainIcon,
   },
   {
     title: 'Mascotas No Convencionales',
     desc: 'Atención especializada para conejos, aves, roedores y reptiles.',
-    href: '/veterinarias?service=exoticos',
-    icon: '🦜',
+    href: '/veterinarias?species=EXOTIC',
+    icon: BirdIcon,
   },
 ];
 
-const COMMUNES = [
+const TOP_COMMUNES = [
   { name: 'Concepción', slug: 'concepcion' },
   { name: 'Talcahuano', slug: 'talcahuano' },
   { name: 'San Pedro de la Paz', slug: 'san-pedro-de-la-paz' },
@@ -95,29 +135,89 @@ const COMMUNES = [
   { name: 'Tomé', slug: 'tome' },
 ];
 
-export default function Home() {
+export default async function Home() {
+  let totalCount: number | null;
+  try {
+    const stats = await fetchClinics({ limit: '1' });
+    totalCount = stats?.meta?.total ?? null;
+  } catch {
+    totalCount = null;
+  }
+
+  // Schema.org estructurado sanitizado
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE}/#website`,
+        url: SITE,
+        name: 'VetBiobío',
+        description: 'Directorio territorial de clínicas veterinarias en la Región del Biobío',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${SITE}/veterinarias?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${SITE}/#organization`,
+        name: 'VetBiobío',
+        url: SITE,
+        description: 'Plataforma comunitaria de información veterinaria para el Biobío',
+      },
+    ],
+  };
+
+  const serializedJsonLd = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+
   return (
-    <div className="space-y-16 py-4">
+    <div className="space-y-10 sm:space-y-16 py-4">
+      {/* Marcado JSON-LD Sanitizado */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+      />
+
       {/* 1. HERO CON PROPUESTA DE VALOR TERRITORIAL */}
-      <section className="relative space-y-6 pt-4 text-center sm:pt-8">
+      <section className="relative space-y-6 pt-2 text-center sm:pt-6">
         <div className="mx-auto flex max-w-fit items-center gap-2">
           <Badge tone="brand">Directorio Territorial Independiente</Badge>
-          <span className="text-xs font-medium text-ink-mute">Región del Biobío</span>
+          <span className="text-xs font-semibold text-ink-mute">
+            {totalCount !== null
+              ? `${totalCount} establecimientos registrados`
+              : 'Región del Biobío'}
+          </span>
         </div>
 
         <div className="mx-auto max-w-3xl space-y-3">
           <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-5xl sm:leading-tight">
             Encuentra atención veterinaria confiable en el Biobío
           </h1>
-          <p className="mx-auto max-w-2xl text-base text-ink-soft sm:text-lg">
-            Directorio verificado con aranceles referenciales, servicios de urgencia y disponibilidad horaria
-            para actuar con rapidez y sin sorpresas.
+          <p className="mx-auto max-w-2xl text-base text-ink-soft sm:text-lg leading-relaxed">
+            Directorio con información en proceso de verificación territorial, aranceles referenciales y
+            servicios de urgencia para actuar con rapidez y sin sorpresas.
           </p>
         </div>
 
-        {/* Buscador Destacado */}
-        <div className="mx-auto max-w-3xl text-left">
-          <SearchBar />
+        {/* Buscador Destacado con Acceso de Urgencia 24h Prioritario */}
+        <div className="mx-auto max-w-3xl space-y-3 text-left">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+            <div className="flex-1">
+              <SearchBar />
+            </div>
+            <Link
+              href="/veterinarias?emergency=true"
+              className="inline-flex min-h-[44px] sm:min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-status-danger-border bg-status-danger-bg px-5 py-3 text-sm font-bold text-status-danger-text shadow-sm transition hover:bg-rose-100 active:scale-[0.99] focus-visible:outline focus-visible:outline-3 focus-visible:outline-rose-700 motion-reduce:transform-none shrink-0"
+            >
+              <EmergencyIcon className="h-5 w-5 text-rose-700" />
+              <span>Urgencia 24 h</span>
+            </Link>
+          </div>
         </div>
 
         {/* Sugerencias Rápidas de Búsqueda */}
@@ -125,98 +225,108 @@ export default function Home() {
           <span className="font-semibold text-ink">Búsquedas habituales:</span>
           <Link
             href="/veterinarias?q=vacuna"
-            className="rounded-full border border-border-subtle bg-surface px-3 py-1 font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800"
+            className="inline-flex min-h-[44px] items-center rounded-full border border-border-subtle bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
           >
             Vacunación
           </Link>
           <Link
             href="/veterinarias?q=ecografia"
-            className="rounded-full border border-border-subtle bg-surface px-3 py-1 font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800"
+            className="inline-flex min-h-[44px] items-center rounded-full border border-border-subtle bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
           >
             Ecografía
           </Link>
           <Link
             href="/veterinarias?q=esterilizacion"
-            className="rounded-full border border-border-subtle bg-surface px-3 py-1 font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800"
+            className="inline-flex min-h-[44px] items-center rounded-full border border-border-subtle bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
           >
             Esterilización
           </Link>
           <Link
             href="/veterinarias?q=traumatologia"
-            className="rounded-full border border-border-subtle bg-surface px-3 py-1 font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800"
+            className="inline-flex min-h-[44px] items-center rounded-full border border-border-subtle bg-surface px-3 py-1 text-xs font-medium text-ink-soft transition hover:border-brand-600 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
           >
             Traumatología
           </Link>
         </div>
       </section>
 
-      {/* 2. ACCIONES RÁPIDAS EN URGENCIAS */}
+      {/* 2. ACCIONES RÁPIDAS EN URGENCIAS (GRID COMPACTA DE 2 COLUMNAS EN MÓVIL) */}
       <section aria-labelledby="acciones-rapidas" className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border-subtle pb-3">
           <div>
             <h2 id="acciones-rapidas" className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
-              Atención inmediata y necesidades urgentes
+              Atención inmediata y necesidades prioritarias
             </h2>
             <p className="text-sm text-ink-mute">
-              Accesos directos prioritarios para situaciones críticas desde tu celular.
+              Accesos directos para resolver consultas médicas urgentes desde tu dispositivo.
             </p>
           </div>
           <Link
             href="/veterinarias"
-            className="text-xs font-semibold text-brand-700 underline underline-offset-4 hover:text-brand-800"
+            className="inline-flex min-h-[44px] items-center text-xs font-semibold text-brand-700 underline underline-offset-4 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
           >
             Ver todas las clínicas &rarr;
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {EMERGENCY_ACTIONS.map((item) => (
-            <Link
-              key={item.title}
-              href={item.href}
-              className={`group flex flex-col justify-between rounded-2xl border p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-md ${item.accent}`}
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl select-none" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <Badge tone={item.badgeTone}>{item.badge}</Badge>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {EMERGENCY_ACTIONS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.title}
+                href={item.href}
+                className={`group flex flex-col justify-between rounded-xl sm:rounded-2xl border p-4 sm:p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-700 ${item.accent}`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.iconBg}`}
+                      aria-hidden="true"
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-ink group-hover:text-brand-800">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm leading-relaxed text-ink-soft">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-ink group-hover:text-brand-800">
-                  {item.title}
-                </h3>
-                <p className="text-xs leading-relaxed text-ink-soft">
-                  {item.description}
-                </p>
-              </div>
-              <div className="mt-4 flex items-center text-xs font-semibold text-brand-700">
-                <span>Explorar disponibles</span>
-                <span className="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">
-                  &rarr;
-                </span>
-              </div>
-            </Link>
-          ))}
+                <div className="mt-3 flex items-center text-xs font-semibold text-brand-700">
+                  <span>Explorar</span>
+                  <span
+                    className="ml-1 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
+                    aria-hidden="true"
+                  >
+                    &rarr;
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
-      {/* 3. EXPLORA POR COMUNA (TOUCH TARGET 44PX) */}
+      {/* 3. EXPLORA POR COMUNA (ENLACES CANÓNICOS Y ACCESO A LAS 33 COMUNAS) */}
       <section aria-labelledby="comunas-titulo" className="space-y-4">
-        <div className="border-b border-border-subtle pb-3">
-          <h2 id="comunas-titulo" className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
-            Explora clínicas por comuna
-          </h2>
-          <p className="text-sm text-ink-mute">
-            Encuentra veterinarias cercanas en las principales localidades de la Región del Biobío.
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border-subtle pb-3">
+          <div>
+            <h2 id="comunas-titulo" className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
+              Explora clínicas por comuna
+            </h2>
+            <p className="text-sm text-ink-mute">
+              Encuentra veterinarias cercanas en las principales localidades de la Región del Biobío.
+            </p>
+          </div>
         </div>
 
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-          {COMMUNES.map((c) => (
+          {TOP_COMMUNES.map((c) => (
             <li key={c.slug}>
               <Link
-                href={`/veterinarias?commune=${c.slug}`}
+                href={`/veterinarias/${c.slug}`}
                 className="flex min-h-[44px] items-center justify-between rounded-xl border border-border-subtle bg-surface px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition hover:border-brand-600 hover:bg-brand-50/50 hover:text-brand-900 focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700"
               >
                 <span>{c.name}</span>
@@ -227,6 +337,28 @@ export default function Home() {
             </li>
           ))}
         </ul>
+
+        {/* Desplegable accesible para las 33 comunas completas */}
+        <details className="group rounded-xl border border-border-subtle bg-surface p-4">
+          <summary className="cursor-pointer font-semibold text-sm text-brand-700 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700 flex items-center justify-between min-h-[44px]">
+            <span>Ver las 33 comunas de la Región del Biobío</span>
+            <span className="text-xs text-ink-mute transition-transform group-open:rotate-180" aria-hidden="true">
+              ▼
+            </span>
+          </summary>
+          <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 pt-3 border-t border-border-subtle">
+            {BIOBIO_COMMUNES.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/veterinarias/${c.slug}`}
+                  className="flex min-h-[44px] items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-ink hover:text-brand-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       </section>
 
       {/* 4. SERVICIOS Y ESPECIALIDADES POPULARES */}
@@ -241,63 +373,89 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {POPULAR_SERVICES.map((serv) => (
-            <Link key={serv.title} href={serv.href} className="group">
-              <Card hoverable className="h-full p-5">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-xl" aria-hidden="true">
-                    {serv.icon}
-                  </span>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-ink group-hover:text-brand-700">
-                      {serv.title}
-                    </h3>
-                    <p className="text-xs text-ink-mute leading-relaxed">
-                      {serv.desc}
-                    </p>
+          {POPULAR_SERVICES.map((serv) => {
+            const Icon = serv.icon;
+            return (
+              <Link
+                key={serv.title}
+                href={serv.href}
+                className="group focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700 rounded-xl"
+              >
+                <Card hoverable className="h-full p-5 motion-reduce:transform-none motion-reduce:transition-none">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-brand-700"
+                      aria-hidden="true"
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-ink group-hover:text-brand-700 text-base">
+                        {serv.title}
+                      </h3>
+                      <p className="text-sm text-ink-soft leading-relaxed">
+                        {serv.desc}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
-      {/* 5. PILARES DE CONFIANZA & VALOR DIFERENCIAL */}
-      <section aria-labelledby="confianza-titulo" className="rounded-2xl border border-border-subtle bg-surface p-6 sm:p-8">
+      {/* 5. PILARES DE CONFIANZA & VALOR DIFERENCIAL (§23) */}
+      <section aria-labelledby="confianza-titulo" className="rounded-2xl border border-border-subtle bg-surface p-6 sm:p-8 space-y-6">
         <div className="mx-auto max-w-2xl text-center space-y-2">
           <h2 id="confianza-titulo" className="text-2xl font-bold text-ink">
             Por qué confiar en la información de VetBiobío
           </h2>
-          <p className="text-sm text-ink-soft">
-            Construimos un directorio independiente pensado para dueños de mascotas, con estándares de verificación territorial.
+          <p className="text-sm text-ink-soft sm:text-base leading-relaxed">
+            Construimos un directorio independiente pensado para familias y tutores, con procesos estructurados
+            de corroboración territorial.
           </p>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div className="rounded-xl bg-surface-alt p-5 space-y-2">
-            <span className="text-2xl" aria-hidden="true">🛡️</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-brand-700" aria-hidden="true">
+              <ShieldIcon className="h-6 w-6" />
+            </span>
             <h3 className="font-bold text-ink text-base">Verificación en Terreno</h3>
-            <p className="text-xs text-ink-mute leading-relaxed">
-              No indexamos datos a ciegas. Cada ficha atraviesa un proceso de cotejo telefónico, presencial o con fuentes sanitarias del establecimiento.
+            <p className="text-sm text-ink-soft leading-relaxed">
+              Cotejo telefónico activo, revisión presencial y cruce de datos con registros sanitarios oficiales para acreditar la existencia de cada centro.
             </p>
           </div>
 
           <div className="rounded-xl bg-surface-alt p-5 space-y-2">
-            <span className="text-2xl" aria-hidden="true">💰</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-brand-700" aria-hidden="true">
+              <PriceBadgeIcon className="h-6 w-6" />
+            </span>
             <h3 className="font-bold text-ink text-base">Aranceles Transparentes</h3>
-            <p className="text-xs text-ink-mute leading-relaxed">
-              Publicamos precios referenciales con fecha de confirmación. Ayudamos a planificar los costos veterinarios sin cobros imprevistos.
+            <p className="text-sm text-ink-soft leading-relaxed">
+              Publicamos aranceles referenciales informados directamente por los centros para evitar cobros sorpresa antes de la consulta.
             </p>
           </div>
 
           <div className="rounded-xl bg-surface-alt p-5 space-y-2">
-            <span className="text-2xl" aria-hidden="true">⚖️</span>
-            <h3 className="font-bold text-ink text-base">Neutralidad Absoluta</h3>
-            <p className="text-xs text-ink-mute leading-relaxed">
-              Ninguna clínica puede pagar para subir su puntaje de confiabilidad o esconder valoraciones. El orden responde a criterios de frescura y servicio.
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-brand-700" aria-hidden="true">
+              <ScalesIcon className="h-6 w-6" />
+            </span>
+            <h3 className="font-bold text-ink text-base">Independencia Editorial</h3>
+            <p className="text-sm text-ink-soft leading-relaxed">
+              Ninguna clínica puede pagar por subir su confiabilidad o esconder valoraciones. El orden responde a criterios objetivos y cercanía.
             </p>
           </div>
+        </div>
+
+        <div className="text-center pt-2">
+          <Link
+            href="/acerca#metodologia"
+            className="inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-700"
+          >
+            Conoce en detalle nuestra metodología de verificación &rarr;
+          </Link>
         </div>
       </section>
 
@@ -307,16 +465,14 @@ export default function Home() {
           <h2 className="text-xl font-bold text-brand-900">
             ¿Detectaste un dato desactualizado o una clínica no registrada?
           </h2>
-          <p className="text-xs sm:text-sm text-brand-800 leading-relaxed">
+          <p className="text-sm text-brand-800 leading-relaxed">
             VetBiobío crece con el aporte de la comunidad. Envía una actualización de horarios o precios para beneficio de todos los dueños de mascotas.
           </p>
         </div>
         <div className="shrink-0">
-          <Link href="/aportar">
-            <Button variant="primary" size="md">
-              Aportar información
-            </Button>
-          </Link>
+          <ButtonLink href="/aportar" variant="primary" size="md">
+            Aportar información
+          </ButtonLink>
         </div>
       </section>
     </div>

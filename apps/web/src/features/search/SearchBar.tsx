@@ -1,7 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { Field, Input } from '@/components/ui/fields';
+import { Field, Input, Select } from '@/components/ui/fields';
+import { BIOBIO_COMMUNES } from '@/data/communes';
 
 /**
  * Buscador principal (§12): Enruta a /veterinarias con parámetros 'q' y 'commune'.
@@ -28,12 +29,19 @@ export function SearchBar() {
       </div>
       <div className="sm:w-64">
         <Field label="¿En qué comuna?" htmlFor="commune">
-          <Input
+          <Select
             id="commune"
             name="commune"
-            placeholder="Ej: Concepción, Talcahuano..."
-            autoComplete="off"
-          />
+            defaultValue=""
+            aria-label="Seleccionar comuna del Biobío"
+          >
+            <option value="">Todo el Biobío</option>
+            {BIOBIO_COMMUNES.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
       </div>
       <Button

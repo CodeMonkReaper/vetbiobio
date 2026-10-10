@@ -6,7 +6,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-14.x-black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20PostGIS%203.4-336791)
 ![Prisma](https://img.shields.io/badge/Prisma-5.22.0-2D3748)
-![Tests](https://img.shields.io/badge/Tests-76%20Unit%20%7C%20Pass-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-131%20Unit%20%7C%20Pass-brightgreen)
 
 > **Plataforma de portafolio para evaluación técnica de 10 minutos.**  
 > Diseñada para demostrar patrones de arquitectura de nivel de producción: monolito modular desacoplado, transaccionalidad ACID estricta, procesamiento asíncrono sin dependencias externas (cero Redis), deduplicación multicriterio geoespacial con PostGIS y motor de calidad de datos declarativo con auto-healing.
@@ -23,7 +23,7 @@ Para evaluar este proyecto en una revisión técnica, sugerimos este recorrido:
 | **2 - 4** | Ingesta masiva, staging y cola en PostgreSQL (`SKIP LOCKED`) | [`ADR-007`](docs/decisions/ADR-007-postgresql-queue.md), [`apps/api/src/import/`](apps/api/src/import/) |
 | **4 - 6** | Deduplicación híbrida PostGIS + trigramas + E.164 | [`ADR-008`](docs/decisions/ADR-008-ingesta-staging-dryrun-postgis.md), [`deduplication.service.ts`](apps/api/src/import/deduplication.service.ts) |
 | **6 - 8** | Motor de calidad de datos, huella SHA-256 y auto-healing | [`ADR-009`](docs/decisions/ADR-009-motor-calidad-datos-declarativo.md), [`apps/api/src/data-quality/`](apps/api/src/data-quality/) |
-| **8 - 10** | Robustez, observabilidad, tests unitarios y E2E | [`correlation-id.middleware.ts`](apps/api/src/common/correlation-id.middleware.ts), [`health.controller.ts`](apps/api/src/health/health.controller.ts) y ejecutar `pnpm test` |
+| **8 - 10** | Robustez, observabilidad, 131 tests unitarios y accesibilidad WCAG 2.2 AA | [`correlation-id.middleware.ts`](apps/api/src/common/correlation-id.middleware.ts), [`health.controller.ts`](apps/api/src/health/health.controller.ts), [`/acerca#metodologia`](apps/web/src/app/acerca/page.tsx) y `pnpm test` |
 
 ---
 
@@ -150,12 +150,20 @@ flowchart LR
     Pages --> Audit["WCAG 2.2 AA\n(Contraste >= 5.6:1, 44px Touch, Focus Trap)"]
 ```
 
-### Características Principales del Sistema de Diseño:
+### Características Principales del Sistema de Diseño y Accesibilidad:
 - **Catálogo Interactivo en Vivo:** Disponible en [`/admin/diseno`](http://localhost:3000/admin/diseno) para inspección inmediata de todos los componentes, tokens, modales interactivos y pruebas de contraste.
+- **Cero Emojis & Sistema Vectorial SVG Accesible (`PublicIcons.tsx`):** 17 iconos SVG puros con `aria-hidden="true"` y soporte para herencia cromática (`currentColor`), erradicando emojis en interfaces públicas para garantizar una experiencia óptima en lectores de pantalla y consistencia visual en cualquier sistema operativo.
+- **Selector Canónico de 33 Comunas (`data/communes.ts`):** Navegación territorial estructurada mediante `<Select>` accesible en la barra de búsqueda y portada, normalizando consultas contra los límites comunales del Biobío.
+- **Polimorfismo Accesible (`ButtonLink`):** Componente polimórfico de enlace con semántica y aspecto de botón que elimina el anidamiento inválido `<Link><Button>` en portada, directorio, formularios de aportes y panel administrativo.
+- **Banner Informativo Persistente y Descartable (`TopBanner.tsx`):** Aviso institucional con botón accesible de descarte (`aria-label`, 44×44px touch target) y persistencia en `sessionStorage`.
+- **Header Móvil Compacto y Accesible (`HeaderNav.tsx`):** Cabecera de fila única con menú hamburguesa desplegable accesible (`aria-expanded`, cierre con tecla `Escape` y marcado de página activa `aria-current="page"`).
+- **Metodología y Transparencia Institucional (`/acerca#metodologia`):** Landing informativa con criterios de verificación territorial, explicación del índice de confiabilidad (0-100), ciclo de caducidad a 180 días y descargo médico legal.
+- **Directorio de Clínicas (`/veterinarias`) Optimizado:** Corrección de duplicación de títulos en metadatos, badge con total real de base de datos, soporte SSR para filtro de urgencia (`open_now`), chips de filtros activos interactivos con remoción individual ('×') y empty state contextual con enlace a `/aportar`.
 - **Contraste Cromático Estricto:** Eliminación de violaciones `slate-400` (2.45:1). Se utiliza `ink-soft` (`#33475b`, **8.24:1**) e `ink-mute` (`#4a6177`, **5.61:1**) superando con holgura el umbral WCAG 2.2 AA (4.5:1).
 - **Target Size Móvil (≥ 44x44px):** Todo botón, casilla de verificación, chip de comuna y control de paginación cumple con el Criterio 2.5.8 de WCAG 2.2, garantizando pulsaciones sin frustración en pantallas táctiles.
 - **Doble Codificación Universal (§15):** Los estados de verificación territorial nunca transmiten significado únicamente mediante color; combinan símbolo unívoco (`✓`, `◷`, `⚠`, `✕`, `ⓘ`) + texto explícito + contraste tonal.
 - **Diálogo Modal Accesible:** Máquina de estados con **Focus Trap** (`Tab`/`Shift+Tab`), tecla `Escape`, `aria-modal="true"` y restauración del foco al botón desencadenador (`activeElement`).
+- **SEO Avanzado y Datos Estructurados:** JSON-LD (`WebSite` + `Organization`), Open Graph completo, `sitemap.xml` dinámico con las 33 comunas y taxonomías, y `robots.txt` con exclusión estricta de rutas administrativas (`/admin`, `/api`).
 - **Números Tabulares (`tabular-nums`):** Precios en pesos chilenos (`$XX.XXX CLP`) alineados columnarmente para comparaciones ágiles.
 - **Sensibilidad Vestibular:** Soporte nativo para `@media (prefers-reduced-motion: reduce)`, mitigando mareos y sobreestimulación visual.
 - **Documentación Completa:**
@@ -197,8 +205,14 @@ pnpm --filter api db:seed
 
 ### 4. Ejecutar Pruebas
 ```bash
+# Ejecutar todas las pruebas unitarias (131 pruebas: 76 API + 55 Web)
+pnpm test
+
 # Pruebas unitarias de la API (17 suites, 76 pruebas)
 pnpm --filter api test:unit
+
+# Pruebas unitarias de la Web (5 suites, 55 pruebas con Vitest y Testing Library)
+pnpm --filter web test
 
 # Pruebas de integración E2E
 pnpm --filter api test:e2e

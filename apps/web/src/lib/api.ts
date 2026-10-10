@@ -1,3 +1,5 @@
+import { BIOBIO_COMMUNES } from '@/data/communes';
+
 const isServer = typeof window === 'undefined';
 export const API_BASE = isServer && process.env.INTERNAL_API_URL
   ? process.env.INTERNAL_API_URL
@@ -11,9 +13,21 @@ export async function fetchClinics(params: Record<string, string>) {
 }
 
 export async function fetchCatalog(kind: 'communes' | 'services' | 'exams' | 'specialties') {
-  const res = await fetch(`${API_BASE}/${kind}`, { next: { revalidate: 3600 } });
-  if (!res.ok) return { data: [] };
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/${kind}`, { next: { revalidate: 3600 } });
+    if (!res.ok) {
+      if (kind === 'communes') return { data: BIOBIO_COMMUNES };
+      return { data: [] };
+    }
+    const json = await res.json();
+    if (kind === 'communes' && (!json.data || json.data.length === 0)) {
+      return { data: BIOBIO_COMMUNES };
+    }
+    return json;
+  } catch {
+    if (kind === 'communes') return { data: BIOBIO_COMMUNES };
+    return { data: [] };
+  }
 }
 
 export async function fetchClinic(slug: string) {

@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { adminApi } from '@/lib/admin';
+import { Alert } from '@/components/ui/display';
+import { Badge, type BadgeTone } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import {
+  TargetIcon,
+  ZapIcon,
+  CheckIcon,
+  XMarkIcon,
+} from '@/components/admin/icons/AdminIcons';
 
 interface OverviewData {
   totalClinics: number;
@@ -44,7 +53,7 @@ interface Issue {
   status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
   causeDescription: string;
   recommendedAction: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   fingerprint: string;
   firstDetectedAt: string | null;
   lastEvaluatedAt: string | null;
@@ -71,6 +80,45 @@ interface RunItem {
   executionTimeMs: number;
   startedAt: string;
   finishedAt: string | null;
+}
+
+function getSeverityTone(severity: Issue['severity']): BadgeTone {
+  switch (severity) {
+    case 'CRITICAL':
+      return 'error';
+    case 'HIGH':
+      return 'warning';
+    case 'MEDIUM':
+      return 'info';
+    case 'LOW':
+    default:
+      return 'neutral';
+  }
+}
+
+function getIssueStatusTone(status: Issue['status']): BadgeTone {
+  switch (status) {
+    case 'OPEN':
+      return 'error';
+    case 'RESOLVED':
+      return 'success';
+    case 'DISMISSED':
+    default:
+      return 'neutral';
+  }
+}
+
+function getIssueStatusLabel(status: Issue['status']): string {
+  switch (status) {
+    case 'OPEN':
+      return 'Abierta';
+    case 'RESOLVED':
+      return 'Resuelta';
+    case 'DISMISSED':
+      return 'Descartada';
+    default:
+      return status;
+  }
 }
 
 export default function CalidadPage() {
@@ -103,10 +151,10 @@ export default function CalidadPage() {
         adminApi('/admin/data-quality/runs?limit=5'),
       ]);
 
-      setOverview(ovData);
-      setRuns(runsData.data || []);
-    } catch (err: any) {
-      setError(err.message || 'Error cargando datos del motor de calidad');
+      setOverview(ovData as OverviewData);
+      setRuns((runsData.data as RunItem[]) || []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error cargando datos del motor de calidad');
     } finally {
       setLoading(false);
     }
@@ -121,18 +169,18 @@ export default function CalidadPage() {
       params.set('limit', '50');
 
       const issuesData = await adminApi(`/admin/data-quality/issues?${params.toString()}`);
-      setIssues(issuesData.data || []);
-    } catch (err: any) {
+      setIssues((issuesData.data as Issue[]) || []);
+    } catch (err: unknown) {
       console.error('Error cargando incidencias:', err);
     }
   }, [statusFilter, severityFilter, ruleFilter]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   useEffect(() => {
-    loadIssues();
+    void loadIssues();
   }, [loadIssues]);
 
   const handleRunAudit = async () => {
@@ -152,8 +200,8 @@ export default function CalidadPage() {
       );
 
       await Promise.all([loadData(), loadIssues()]);
-    } catch (err: any) {
-      setError(err.message || 'Error al ejecutar auditoría manual');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al ejecutar auditoría manual');
     } finally {
       setRunningAudit(false);
     }
@@ -187,36 +235,10 @@ export default function CalidadPage() {
       setSelectedIssue(null);
       setResolutionNotes('');
       await Promise.all([loadData(), loadIssues()]);
-    } catch (err: any) {
-      setError(err.message || 'Error actualizando estado de la incidencia');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error actualizando estado de la incidencia');
     } finally {
       setSubmittingResolution(false);
-    }
-  };
-
-  const getSeverityBadgeClass = (severity: string) => {
-    switch (severity) {
-      case 'CRITICAL':
-        return 'bg-rose-100 text-rose-800 border-rose-200';
-      case 'HIGH':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'MEDIUM':
-        return 'bg-sky-100 text-sky-800 border-sky-200';
-      default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
-    }
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return 'bg-rose-50 text-rose-700 border-rose-300';
-      case 'RESOLVED':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-300';
-      case 'DISMISSED':
-        return 'bg-slate-100 text-slate-600 border-slate-300';
-      default:
-        return 'bg-slate-50 text-slate-700 border-slate-300';
     }
   };
 
@@ -226,73 +248,67 @@ export default function CalidadPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">🎯</span>
+            <TargetIcon className="w-6 h-6 text-teal-700" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Motor de Calidad de Datos
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Auditoría continua, detección declarativa de anomalías e índice explicable de confiabilidad
+            Auditoría continua, detección declarativa de anomalías e índice explicable de confiabilidad.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleRunAudit}
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => void handleRunAudit()}
             disabled={runningAudit}
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 font-medium"
           >
             {runningAudit ? (
               <>
-                <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-                <span>Evaluando 16 Clínicas...</span>
+                <span>Evaluando Clínicas...</span>
               </>
             ) : (
               <>
-                <span>⚡</span>
+                <ZapIcon className="w-4 h-4 text-white" />
                 <span>Ejecutar Auditoría Ahora</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Alertas */}
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl flex items-start gap-3">
-          <span className="text-xl">⚠️</span>
-          <div>
-            <h3 className="font-semibold text-sm">Atención</h3>
-            <p className="text-sm">{error}</p>
-          </div>
-        </div>
+        <Alert tone="error" title="Atención" onClose={() => setError(null)}>
+          {error}
+        </Alert>
       )}
 
       {successMsg && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl flex items-start gap-3">
-          <span className="text-xl">✓</span>
-          <div>
-            <h3 className="font-semibold text-sm">Operación Exitosa</h3>
-            <p className="text-sm">{successMsg}</p>
-          </div>
-        </div>
+        <Alert tone="success" title="Operación Exitosa" onClose={() => setSuccessMsg(null)}>
+          {successMsg}
+        </Alert>
       )}
 
       {/* KPI Cards */}
       {overview && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
               Salud Regional
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-slate-900">
                 {overview.healthyClinicsPercent}%
               </span>
-              <span className="text-xs text-emerald-600 font-semibold">Tier Alta (&ge;80)</span>
+              <span className="text-xs text-emerald-700 font-semibold">Tier Alta (&ge;80)</span>
             </div>
             <p className="text-xs text-slate-500 mt-2">
               {overview.tiers.ALTA} de {overview.totalClinics} clínicas con datos de alta confiabilidad
@@ -300,7 +316,7 @@ export default function CalidadPage() {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
               Puntaje Promedio
             </div>
             <div className="flex items-baseline gap-2">
@@ -315,26 +331,26 @@ export default function CalidadPage() {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
               Incidencias Abiertas
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-rose-600">
+              <span className="text-3xl font-extrabold text-rose-700">
                 {overview.totalOpenIssues}
               </span>
-              <span className="text-xs font-medium text-slate-400">activas</span>
+              <span className="text-xs font-medium text-slate-500">activas</span>
             </div>
             <div className="flex gap-2 mt-2 text-xs">
               <span className="text-rose-700 font-semibold">{overview.issuesBySeverity.CRITICAL} Críticas</span>
-              <span>·</span>
+              <span className="text-slate-300">·</span>
               <span className="text-amber-700 font-semibold">{overview.issuesBySeverity.HIGH} Altas</span>
-              <span>·</span>
+              <span className="text-slate-300">·</span>
               <span className="text-sky-700 font-semibold">{overview.issuesBySeverity.MEDIUM} Medias</span>
             </div>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
               Última Auditoría
             </div>
             <div className="text-lg font-bold text-slate-900">
@@ -372,8 +388,8 @@ export default function CalidadPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Bandeja de Incidencias Idempotentes</h2>
-              <p className="text-xs text-slate-500">
-                Infracciones detectadas por el catálogo de 7 reglas. Se auto-resuelven al corregir los datos.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Infracciones detectadas por el catálogo de 7 reglas. Se auto-resuelven al corregir los datos en origen.
               </p>
             </div>
 
@@ -381,7 +397,8 @@ export default function CalidadPage() {
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
+                aria-label="Filtrar por estado de incidencia"
+                onChange={(e) => setStatusFilter(e.target.value as 'OPEN' | 'RESOLVED' | 'DISMISSED' | '')}
                 className="text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="OPEN">Estado: Abiertas</option>
@@ -392,7 +409,8 @@ export default function CalidadPage() {
 
               <select
                 value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value as any)}
+                aria-label="Filtrar por severidad de incidencia"
+                onChange={(e) => setSeverityFilter(e.target.value as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | '')}
                 className="text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">Severidad: Todas</option>
@@ -404,6 +422,7 @@ export default function CalidadPage() {
 
               <select
                 value={ruleFilter}
+                aria-label="Filtrar por regla de calidad"
                 onChange={(e) => setRuleFilter(e.target.value)}
                 className="text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
@@ -420,17 +439,17 @@ export default function CalidadPage() {
           </div>
         </div>
 
-        {/* Tabla */}
+        {/* Tabla Accesible */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-400 border-b border-slate-200">
+          <table className="w-full text-left text-sm text-slate-600" aria-label="Bandeja de Incidencias de Calidad de Datos">
+            <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-3">Severidad</th>
-                <th className="px-6 py-3">Clínica / Comuna</th>
-                <th className="px-6 py-3">Regla & Causa</th>
-                <th className="px-6 py-3">Acción Recomendada</th>
-                <th className="px-6 py-3">Estado</th>
-                <th className="px-6 py-3 text-right">Acciones</th>
+                <th scope="col" className="px-6 py-3">Severidad</th>
+                <th scope="col" className="px-6 py-3">Clínica / Comuna</th>
+                <th scope="col" className="px-6 py-3">Regla & Causa</th>
+                <th scope="col" className="px-6 py-3">Acción Recomendada</th>
+                <th scope="col" className="px-6 py-3">Estado</th>
+                <th scope="col" className="px-6 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -444,41 +463,33 @@ export default function CalidadPage() {
                 issues.map((issue) => (
                   <tr key={issue.id} className="hover:bg-slate-50/70 transition">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2.5 py-1 text-xs font-bold rounded-lg border ${getSeverityBadgeClass(
-                          issue.severity,
-                        )}`}
-                      >
+                      <Badge tone={getSeverityTone(issue.severity)} size="sm">
                         {issue.severity}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-semibold text-slate-900">
                         {issue.clinic.name}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-500">
                         {issue.clinic.communeName || 'Región del Biobío'}
                       </div>
                     </td>
                     <td className="px-6 py-4 max-w-sm">
-                      <div className="text-xs font-mono font-semibold text-slate-700">
+                      <div className="text-xs font-mono font-semibold text-slate-800">
                         {issue.ruleCode}
                       </div>
                       <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">
                         {issue.causeDescription}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500 max-w-xs">
+                    <td className="px-6 py-4 text-xs text-slate-600 max-w-xs">
                       {issue.recommendedAction}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full border ${getStatusBadgeClass(
-                          issue.status,
-                        )}`}
-                      >
-                        {issue.status}
-                      </span>
+                      <Badge tone={getIssueStatusTone(issue.status)} size="sm">
+                        {getIssueStatusLabel(issue.status)}
+                      </Badge>
                       {issue.resolutionReason && (
                         <div className="text-[10px] text-slate-400 mt-0.5">
                           {issue.resolutionReason}
@@ -488,23 +499,25 @@ export default function CalidadPage() {
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       {issue.status === 'OPEN' ? (
                         <button
+                          type="button"
                           onClick={() => {
                             setSelectedIssue(issue);
                             setResolveAction('RESOLVED');
                             setResolutionNotes('');
                           }}
-                          className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition"
+                          className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[36px]"
                         >
                           Resolver
                         </button>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => {
                             setSelectedIssue(issue);
                             setResolveAction(issue.status === 'RESOLVED' ? 'DISMISSED' : 'RESOLVED');
                             setResolutionNotes(issue.resolutionNotes || '');
                           }}
-                          className="text-slate-500 hover:text-slate-800 text-xs font-medium underline"
+                          className="text-slate-600 hover:text-slate-900 text-xs font-medium underline min-h-[36px] px-2 py-1"
                         >
                           Ver Detalle
                         </button>
@@ -525,34 +538,34 @@ export default function CalidadPage() {
             Historial de Ejecuciones de Auditoría
           </h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 uppercase text-slate-400 border-b border-slate-200">
+            <table className="w-full text-left text-xs text-slate-600" aria-label="Historial de ejecuciones de auditoría">
+              <thead className="bg-slate-50 uppercase text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-2">ID</th>
-                  <th className="px-4 py-2">Disparador</th>
-                  <th className="px-4 py-2">Fecha y Hora</th>
-                  <th className="px-4 py-2">Clínicas</th>
-                  <th className="px-4 py-2">Incidencias Abiertas</th>
-                  <th className="px-4 py-2">Auto-Resueltas</th>
-                  <th className="px-4 py-2">Duración</th>
+                  <th scope="col" className="px-4 py-2">ID</th>
+                  <th scope="col" className="px-4 py-2">Disparador</th>
+                  <th scope="col" className="px-4 py-2">Fecha y Hora</th>
+                  <th scope="col" className="px-4 py-2">Clínicas</th>
+                  <th scope="col" className="px-4 py-2">Incidencias Abiertas</th>
+                  <th scope="col" className="px-4 py-2">Auto-Resueltas</th>
+                  <th scope="col" className="px-4 py-2">Duración</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {runs.map((r) => (
                   <tr key={r.id}>
-                    <td className="px-4 py-2 font-mono">#{r.id}</td>
+                    <td className="px-4 py-2 font-mono font-bold text-slate-800">#{r.id}</td>
                     <td className="px-4 py-2">
                       <span className="font-semibold text-slate-700">
                         {r.triggerType === 'MANUAL' ? 'Manual (Admin)' : 'Cron Diario (03:00 AM)'}
                       </span>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 text-slate-500">
                       {new Date(r.startedAt).toLocaleString('es-CL')}
                     </td>
-                    <td className="px-4 py-2">{r.evaluatedClinics}</td>
-                    <td className="px-4 py-2 font-semibold text-rose-600">{r.openIssuesCount}</td>
-                    <td className="px-4 py-2 font-semibold text-emerald-600">{r.resolvedIssuesCount}</td>
-                    <td className="px-4 py-2 font-mono">{r.executionTimeMs} ms</td>
+                    <td className="px-4 py-2 font-semibold text-slate-800">{r.evaluatedClinics}</td>
+                    <td className="px-4 py-2 font-semibold text-rose-700">{r.openIssuesCount}</td>
+                    <td className="px-4 py-2 font-semibold text-emerald-700">{r.resolvedIssuesCount}</td>
+                    <td className="px-4 py-2 font-mono text-slate-500">{r.executionTimeMs} ms</td>
                   </tr>
                 ))}
               </tbody>
@@ -562,51 +575,47 @@ export default function CalidadPage() {
       )}
 
       {/* Disclaimer Legal Visible Obligatorio */}
-      <div className="bg-slate-100 border border-slate-200 text-slate-600 p-5 rounded-2xl text-xs leading-relaxed">
-        <span className="font-bold text-slate-800">Aviso Legal de Conformidad: </span>
+      <div className="bg-slate-100 border border-slate-200 text-slate-700 p-5 rounded-2xl text-xs leading-relaxed">
+        <span className="font-bold text-slate-900">Aviso Legal de Conformidad: </span>
         {overview?.disclaimer ||
           'El Puntaje de Confiabilidad de VetBiobío refleja exclusivamente la frescura, integridad y corroboración documental de los datos de contacto y horarios publicados en la plataforma. No constituye una certificación sanitaria ni avala la calidad médica de los servicios veterinarios.'}
       </div>
 
-      {/* Modal de Resolución / Descarte */}
+      {/* Modal Accesible de Resolución / Detalle */}
       {selectedIssue && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-xs font-mono font-bold text-slate-400">
-                  INCIDENCIA #{selectedIssue.id}
-                </span>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {selectedIssue.clinic.name}
-                </h3>
-              </div>
-              <span
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${getSeverityBadgeClass(
-                  selectedIssue.severity,
-                )}`}
-              >
-                {selectedIssue.severity}
-              </span>
+        <Modal
+          isOpen={Boolean(selectedIssue)}
+          onClose={() => setSelectedIssue(null)}
+          title={`Incidencia #${selectedIssue.id} — ${selectedIssue.clinic.name}`}
+          description={`Severidad: ${selectedIssue.severity} · Regla: ${selectedIssue.ruleCode}`}
+        >
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Badge tone={getSeverityTone(selectedIssue.severity)} size="sm">
+                Severidad {selectedIssue.severity}
+              </Badge>
+              <Badge tone={getIssueStatusTone(selectedIssue.status)} size="sm">
+                {getIssueStatusLabel(selectedIssue.status)}
+              </Badge>
             </div>
 
-            <div className="space-y-2 text-xs">
+            <div className="space-y-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
               <div>
-                <span className="font-semibold text-slate-500">Regla: </span>
-                <span className="font-mono text-slate-800">{selectedIssue.ruleCode}</span>
+                <span className="font-bold text-slate-600">Regla violada: </span>
+                <span className="font-mono text-slate-900">{selectedIssue.ruleCode}</span>
               </div>
               <div>
-                <span className="font-semibold text-slate-500">Causa: </span>
+                <span className="font-bold text-slate-600">Causa detectada: </span>
                 <span className="text-slate-800">{selectedIssue.causeDescription}</span>
               </div>
               <div>
-                <span className="font-semibold text-slate-500">Acción sugerida: </span>
+                <span className="font-bold text-slate-600">Acción sugerida: </span>
                 <span className="text-slate-800">{selectedIssue.recommendedAction}</span>
               </div>
               {selectedIssue.metadata && Object.keys(selectedIssue.metadata).length > 0 && (
                 <div>
-                  <span className="font-semibold text-slate-500">Metadatos: </span>
-                  <pre className="mt-1 p-2 bg-slate-50 rounded border border-slate-200 overflow-x-auto text-[11px] font-mono text-slate-700">
+                  <span className="font-bold text-slate-600">Metadatos técnicos: </span>
+                  <pre className="mt-1 p-2 bg-white rounded border border-slate-200 overflow-x-auto text-[11px] font-mono text-slate-800">
                     {JSON.stringify(selectedIssue.metadata, null, 2)}
                   </pre>
                 </div>
@@ -614,7 +623,7 @@ export default function CalidadPage() {
             </div>
 
             {selectedIssue.status === 'OPEN' ? (
-              <form onSubmit={handleResolveIssue} className="space-y-4 pt-2">
+              <form onSubmit={(e) => void handleResolveIssue(e)} className="space-y-4 pt-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Acción de Moderación
@@ -623,58 +632,63 @@ export default function CalidadPage() {
                     <button
                       type="button"
                       onClick={() => setResolveAction('RESOLVED')}
-                      className={`px-3 py-2 text-xs font-medium rounded-lg border transition ${
+                      className={`px-3 py-2 text-xs font-medium rounded-lg border transition inline-flex items-center justify-center gap-1.5 ${
                         resolveAction === 'RESOLVED'
                           ? 'bg-emerald-50 border-emerald-500 text-emerald-800 font-bold'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      ✓ Marcar como Resuelta
+                      <CheckIcon className="w-3.5 h-3.5" />
+                      <span>Marcar como Resuelta</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setResolveAction('DISMISSED')}
-                      className={`px-3 py-2 text-xs font-medium rounded-lg border transition ${
+                      className={`px-3 py-2 text-xs font-medium rounded-lg border transition inline-flex items-center justify-center gap-1.5 ${
                         resolveAction === 'DISMISSED'
                           ? 'bg-slate-100 border-slate-500 text-slate-800 font-bold'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      ✕ Descartar (Excepción)
+                      <XMarkIcon className="w-3.5 h-3.5" />
+                      <span>Descartar (Excepción)</span>
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label htmlFor="notes-textarea" className="block text-xs font-semibold text-slate-700 mb-1">
                     Notas de Moderación (Obligatorio, mín. 5 caracteres)
                   </label>
                   <textarea
+                    id="notes-textarea"
                     required
                     minLength={5}
                     rows={3}
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
                     placeholder="Ej. Datos contrastados telefónicamente con el director técnico..."
-                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
                   />
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setSelectedIssue(null)}
-                    className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
                   >
                     Cancelar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
+                    variant="primary"
+                    size="sm"
                     disabled={submittingResolution}
-                    className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm transition disabled:opacity-50"
                   >
                     {submittingResolution ? 'Guardando...' : 'Confirmar Resolución'}
-                  </button>
+                  </Button>
                 </div>
               </form>
             ) : (
@@ -690,18 +704,19 @@ export default function CalidadPage() {
                   </div>
                 )}
                 <div className="pt-2 flex justify-end">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setSelectedIssue(null)}
-                    className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
                   >
                     Cerrar
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

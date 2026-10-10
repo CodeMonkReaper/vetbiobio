@@ -40,7 +40,7 @@ export function CompareButton({ slug, name }: { slug: string; name: string }) {
       type="button"
       onClick={toggle}
       aria-pressed={selected}
-      aria-label={`${selected ? 'Quitar' : 'Agregar'} ${name} de la comparación`}
+      aria-label={`${selected ? 'Quitar' : 'Agregar'} ${name} ${selected ? 'de' : 'a'} la comparación`}
       className={`inline-flex min-h-[44px] items-center justify-center rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-brand-700 ${
         selected
           ? 'border-brand-500 bg-brand-50 text-brand-800 shadow-sm hover:bg-brand-100'
