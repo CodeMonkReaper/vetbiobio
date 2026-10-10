@@ -88,12 +88,14 @@ docker-compose.yml (postgis), .env.example, ci.yml
 | 2026-10-09 | Refinamiento UI/UX Cards & Login | Banner placeholder uniforme para cards sin foto (h-36), fix duplicación 'Desde' en aranceles, y rediseño integral accesible de `/admin/login` con tokens VetBiobío |
 | 2026-10-09 | Edición de Datos en Aportes Admin | Editor interactivo dual (formulario de campos clave + editor JSON en vivo con formateador y validación de sintaxis) en `/admin/aportes/[id]` con guardado transaccional y auditoría |
 | 2026-10-09 | Rediseño Portada, Listado, Accesibilidad WCAG 2.2 AA y SEO | Catálogo 33 comunas (`data/communes.ts`), 17 SVG (`PublicIcons.tsx`, cero emojis), `ButtonLink` polimórfico, `TopBanner` descartable en `sessionStorage`, `HeaderNav` móvil con Escape/aria-expanded, `/acerca#metodologia`, chips de filtros interactivos en `/veterinarias`, fix títulos duplicados, robots/sitemap ampliados, 55 pruebas web (131 tests monorepo) |
+| 2026-10-10 | Cierre Técnico y Plan Estratégico de Negocio / Monetización | Documento maestro `docs/cierre-desarrollo-modelo-negocio.md`: 4 streams de ingresos B2B/B2C, modelo SaaS con planes Pro ($24.900 CLP) y Hospital ($59.900 CLP), atribución comprobable con `clinic_event`, unit economics, proyecciones a 12 meses y checklist GTM |
 
-## 4. Próximo paso inmediato
+## 4. Próximo paso inmediato (Operaciones y Negocio)
 
-1. Ejecutar piloto de verificación telefónica de las 15 clínicas pendientes (`PENDING_REVIEW`).
-2. Completar revisión legal formal previa al despliegue en producción con tráfico real.
-3. Rotar credenciales en producción (`CLOUDINARY_API_SECRET`, `JWT_SECRET`).
+1. Registrar dominio `vetbiobio.cl` en NIC Chile y desplegar en VPS con SSL.
+2. Rotar credenciales en producción (`CLOUDINARY_API_SECRET`, `JWT_SECRET`).
+3. Ejecutar piloto de contacto comercial y verificación telefónica con las 16 clínicas del Gran Concepción.
+4. Integrar pasarela de cobro recurrente chilena (Fintoc / Mercado Pago) para activar suscripciones.
 
 ## 5. Reglas del log
 
